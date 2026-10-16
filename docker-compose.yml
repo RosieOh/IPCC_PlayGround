@@ -1,0 +1,42 @@
+# IPCC Playground 로컬 환경
+#
+#   make up      Mac 안에서만 접속 (소프트폰 → 127.0.0.1)
+#   make up-lan  같은 Wi-Fi의 휴대폰에서도 접속 (EXTERNAL_IP=Mac의 LAN IP, PUBLISH_IP=0.0.0.0)
+#
+# Stage 3~4에서 mysql, redis 서비스가 여기에 추가된다.
+name: ipcc-playground
+
+services:
+  asterisk:
+    build:
+      context: ./asterisk
+      args:
+        ASTERISK_VERSION: ${ASTERISK_VERSION:-22.11.0}
+    image: ipcc-playground/asterisk:${ASTERISK_VERSION:-22.11.0}
+    container_name: ipcc-asterisk
+    hostname: asterisk
+    environment:
+      # SIP 헤더와 SDP(c= 라인)에 '바깥에서 보이는 주소'로 적을 IP. NAT 대응의 핵심이다.
+      EXTERNAL_IP: ${EXTERNAL_IP:-127.0.0.1}
+      # 로그·CDR 시각을 한국 시간으로 (AMI 이벤트의 Timestamp는 시간대와 무관한 유닉스 시각)
+      TZ: ${TZ:-Asia/Seoul}
+    ports:
+      # SIP / RTP: 기본은 Mac 안에서만 열고, LAN 모드에서는 0.0.0.0으로 연다
+      - "${PUBLISH_IP:-127.0.0.1}:5060:5060/udp"
+      - "${PUBLISH_IP:-127.0.0.1}:10000-10099:10000-10099/udp"
+      # AMI / HTTP: 항상 Mac 안에서만 연다 (AMI는 암호화되지 않은 평문 프로토콜)
+      - "127.0.0.1:5038:5038/tcp"
+      - "127.0.0.1:8088:8088/tcp"
+    volumes:
+      - ./asterisk/conf:/etc/asterisk:ro
+      - ./tests/sipp:/sipp:ro
+      - ./data/asterisk/log:/var/log/asterisk
+      - ./data/asterisk/monitor:/var/spool/asterisk/monitor
+    extra_hosts:
+      # Stage 5: Asterisk → Mac에서 도는 Go FastAGI 서버(agi://host.docker.internal:4573)
+      - "host.docker.internal:host-gateway"
+    cap_add:
+      # 컨테이너 안에서 sngrep/tcpdump로 패킷을 캡처하기 위한 권한
+      - NET_ADMIN
+      - NET_RAW
+    restart: unless-stopped

@@ -1,0 +1,22 @@
+;
+; pjsip_transport.conf.tmpl — SIP 트랜스포트(NAT) 템플릿
+;
+; 컨테이너가 시작될 때 entrypoint.sh가 @EXTERNAL_IP@ 를 실제 값으로 바꿔서
+; /etc/asterisk-generated/pjsip_transport.conf 를 만든다. 이 파일을 고쳤다면 `make restart`.
+;
+; 왜 필요한가 (Mac Docker Desktop):
+;   소프트폰(Mac) ─▶ 127.0.0.1:5060 ─▶ [Docker Desktop 포트포워딩] ─▶ 컨테이너(172.x.x.x)
+;   Asterisk는 자기 IP(172.x.x.x)를 SIP 헤더와 SDP의 c= 라인에 적으려 하지만,
+;   Mac에서는 그 주소로 갈 수 없다 → "바깥에서 보이는 주소"(EXTERNAL_IP)를 대신 적게 한다.
+;   이걸 안 하면 "연결은 되는데 소리가 안 들림"이 생긴다. (docs/04-sip-sdp-rtp.md)
+;
+[transport-udp]
+type = transport
+protocol = udp
+bind = 0.0.0.0:5060
+; local_net에 속한 상대에게는 원래 주소를, 그 밖의 상대에게는 external_* 주소를 알려준다.
+; 포트포워딩을 거쳐 온 패킷은 출발지가 Docker 내부 사설 IP로 보이므로,
+; local_net을 컨테이너 자신(127.0.0.1)으로만 좁혀서 나머지를 전부 '바깥'으로 취급하게 했다.
+local_net = 127.0.0.1/32
+external_media_address = @EXTERNAL_IP@
+external_signaling_address = @EXTERNAL_IP@

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!--
+  REGISTER → 401(인증 요구) → 인증 정보를 붙여 다시 REGISTER → 200 OK
+
+  실행: make sip-register
+  확인: make rx c="pjsip show contacts"   (60초 동안 9001 등록이 보인다)
+
+  [user]는 -key user 9001, 인증 정보는 -au/-ap 로 넘긴다.
+-->
+<scenario name="register">
+
+  <send retrans="500">
+    <![CDATA[
+
+      REGISTER sip:[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[user]@[remote_ip]>;tag=[pid]SIPpTag00[call_number]
+      To: <sip:[user]@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 1 REGISTER
+      Contact: <sip:[user]@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Expires: 60
+      User-Agent: SIPp
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="401" auth="true"/>
+
+  <send retrans="500">
+    <![CDATA[
+
+      REGISTER sip:[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: <sip:[user]@[remote_ip]>;tag=[pid]SIPpTag00[call_number]
+      To: <sip:[user]@[remote_ip]>
+      Call-ID: [call_id]
+      CSeq: 2 REGISTER
+      Contact: <sip:[user]@[local_ip]:[local_port]>
+      [authentication]
+      Max-Forwards: 70
+      Expires: 60
+      User-Agent: SIPp
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200"/>
+
+</scenario>
