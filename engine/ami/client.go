@@ -330,7 +330,7 @@ func (c *Client) session(ctx context.Context) (loggedIn bool, err error) {
 // handshake는 배너를 읽고 로그인한다.
 func (c *Client) handshake(conn net.Conn, r *Reader) (version string, err error) {
 	_ = conn.SetDeadline(time.Now().Add(c.cfg.DialTimeout + c.cfg.ActionTimeout))
-	defer conn.SetDeadline(time.Time{})
+	defer func() { _ = conn.SetDeadline(time.Time{}) }()
 
 	version, err = r.ReadBanner()
 	if err != nil {
