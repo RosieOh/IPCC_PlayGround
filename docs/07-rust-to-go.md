@@ -85,12 +85,12 @@ done
 
 | 위험 | Rust | Go에서 막는 법 |
 |---|---|---|
-| 상태 하나를 빠뜨린 분기 | `match`가 빠짐없이 검사 | `exhaustive` 린터 (golangci-lint). 상태머신에 치명적 |
+| 상태 하나를 빠뜨린 분기 | `match`가 빠짐없이 검사 | `exhaustive` 린터 (`make lint`). 상태머신에 치명적 |
 | 데이터 레이스 | 소유권·`Send`/`Sync`가 컴파일 시 차단 | `go test -race`, 상태는 고루틴 하나가 소유 |
 | null 역참조 | `Option`이 강제 | 포인터를 줄이고, 생성자에서 필수 필드 채우기, 테스트 |
 | 슬라이스 공유로 인한 오염 | 소유권 이동 | `append`가 원본 배열을 공유할 수 있다. 복사해서 넘긴다 (`Message.With`와 그 테스트 참고) |
 | 정수 오버플로 | 디버그 빌드에서 panic | 조용히 감긴다. 범위가 의심되면 직접 검사 |
-| 처리 안 한 에러 | `Result`를 쓰지 않으면 경고 | `errcheck` 린터 |
+| 처리 안 한 에러 | `Result`를 쓰지 않으면 경고 | `errcheck` 린터 (`make lint`) |
 | UTF-8이 아닌 문자열 | `String`이 UTF-8 보장 | Go `string`은 아무 바이트나 담는다. EUC-KR 같은 입력은 경계에서 변환 |
 
 **panic의 범위가 다르다.** tokio에서 `spawn`한 태스크가 panic하면 그 태스크만 죽고 `JoinError`로 돌아온다.
@@ -107,7 +107,7 @@ Go에서 고루틴 하나가 panic하면 **프로세스 전체가 죽는다.** C
 2. **테스트부터 옮긴다.** Rust의 `#[test]`를 Go 테스트로. 테스트가 없으면 녹화로 golden 출력을 먼저 만든다.
 3. **코드를 옮긴다.** 관용구는 Go답게 바꾸되(3절 표), 동작은 바꾸지 않는다. 개선하고 싶은 점은 따로 적어 두고 나중에 한다.
 4. **차분 테스트**가 모든 녹화에서 0 diff가 될 때까지 반복한다.
-5. `go vet`, `go test -race`, `exhaustive`, `errcheck`.
+5. `make test`, `make lint`, `make e2e` (CI도 같은 명령을 돌린다).
 6. **리뷰**한다 (9절 체크리스트).
 
 ## 8. 코딩 에이전트와 함께 포팅하기
@@ -134,6 +134,7 @@ legacy-rust/src/agent.rs의 상담원 상태머신을 engine/state/agent.go로 �
 ## 9. 리뷰 체크리스트
 
 - [ ] 모든 녹화에서 차분 테스트 0 diff
+- [ ] `make test`, `make lint`, `make e2e` 통과 (PR의 CI가 초록불)
 - [ ] `switch`가 모든 상태·이벤트를 다루는가 (exhaustive 린터)
 - [ ] 상태를 여러 고루틴이 만지지 않는가 (`-race`)
 - [ ] 라이브러리 코드에 panic이 없는가. `unwrap()`이 그대로 옮겨진 곳은 없는가

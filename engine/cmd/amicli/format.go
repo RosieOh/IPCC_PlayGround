@@ -116,7 +116,7 @@ func writeJSONLine(w io.Writer, m ami.Message) {
 		fmt.Fprintf(w, `{"_error":%q}`+"\n", err.Error())
 		return
 	}
-	w.Write(append(b, '\n'))
+	_, _ = w.Write(append(b, '\n')) // 출력이 파이프로 끊겨도(| head 등) CLI가 할 수 있는 일은 없다
 }
 
 // eventTime은 Asterisk가 붙인 Timestamp(유닉스 초.마이크로초)를 쓰고, 없으면 받은 시각을 쓴다.

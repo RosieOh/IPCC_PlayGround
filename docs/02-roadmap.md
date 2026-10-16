@@ -64,6 +64,11 @@ Stage 2부터는 설계 문서만 있고 구현은 직접 한다.
 - 샘플 녹화 `engine/testdata/sim-normal-and-abandon.log` (정상 콜 1건 + 포기 콜 1건)
 - 실제 Asterisk로 확인한 것: 재시작 후 자동 재접속, `docker compose pause` 때 약 20초 안에 끊김 감지 후 복구,
   실측 중 발견한 버그 1건 수정 (OriginateResponse가 응답으로 잘못 분류되던 문제 — 05 문서 6절)
+- `make e2e` (`engine/e2e`): 실제 Asterisk로 로그인 → 정상 콜 2건 → 포기 → SIPp 등록·통화 → 로그아웃
+  (`E2E_RESTART=1`이면 재시작 후 재접속까지)을 이벤트로 검증한다. 약 30초
+- `make lint`: golangci-lint (errcheck, exhaustive, errorlint)
+- CI (`.github/workflows/ci.yml`): PR과 `main` 푸시마다 `make test`, golangci-lint, `make e2e`
+- e2e가 찾은 사실: **AgentComplete가 채널 정보 없이 올 수 있다** (05 문서 6절 11번). Stage 2 설계에 바로 영향을 준다
 
 **직접 해볼 것** — 읽고, 설명하고, 바꿔 보기
 - [ ] `client.go`의 고루틴 구성을 그림으로 그리기: 연결 하나에 고루틴이 몇 개고, 채널은 어디서 어디로 흐르나
@@ -100,7 +105,7 @@ Stage 2부터는 설계 문서만 있고 구현은 직접 한다.
 **완료 기준**
 - [ ] 모든 시나리오 녹화의 replay 결과가 기대 스냅샷과 같다 (golden test)
 - [ ] Rust 구현과 Go 구현의 출력이 모든 녹화에서 같다 (차분 테스트)
-- [ ] `go test -race`, `exhaustive` 린터 통과
+- [ ] `make test`, `make lint`(exhaustive 포함), `make e2e` 통과. 상태머신 시나리오를 e2e에도 추가
 
 ---
 

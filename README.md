@@ -1,5 +1,7 @@
 # IPCC Playground
 
+[![CI](https://github.com/RosieOh/IPCC_PlayGround/actions/workflows/ci.yml/badge.svg)](https://github.com/RosieOh/IPCC_PlayGround/actions/workflows/ci.yml)
+
 오픈소스 Asterisk 기반 IPCC 엔진 개발(핵심 엔진 Rust → Go 전환)을 미리 익히기 위한 학습용 **미니 IPCC**다.
 
 - **Asterisk 22 LTS** (Docker 소스 빌드) — SIP 내선, 다이얼플랜, 큐(ACD)
@@ -12,7 +14,9 @@
 
 ```bash
 make up            # Asterisk 빌드·기동 (첫 실행은 몇 분)
-make test          # Go 테스트 (vet + race)
+make test          # 단위 테스트 (gofmt + vet + race)
+make lint          # golangci-lint (Docker로 실행)
+make e2e           # 실제 Asterisk로 콜 흐름 전체를 자동 검증 (약 30초)
 
 make watch         # 터미널 1: AMI 이벤트 실시간 보기 (recordings/에 녹화)
 make sim-agents    # 터미널 2: 가짜 상담원 3명 로그인
@@ -29,11 +33,12 @@ make               # 전체 명령 목록
 | Stage | 내용 | 상태 |
 |---|---|---|
 | 0 | Asterisk 22.11 + PJSIP 내선 1001~1003·9001, 에코(600)·멘트(601)·대표번호(5000 → 큐), Mac Docker NAT 설정, SIPp 시나리오 | ✅ 동작 확인 |
-| 1 | `engine/ami` AMI 클라이언트 + `amicli` (watch / action / replay / agent / sim-call), 테스트, 샘플 녹화 | ✅ 동작 확인 |
+| 1 | `engine/ami` AMI 클라이언트 + `amicli` (watch / action / replay / agent / sim-call), 단위 테스트, e2e, CI, 샘플 녹화 | ✅ 동작 확인 |
 | 2~6 | 상태머신, 실시간 화면, 통계, ARS, 연동·장애 대응 | 설계 문서 / 계획 |
 
 실제 Asterisk로 확인한 것: 큐 인입 → 상담원 연결 → 종료, 대기 중 포기, SIP 등록·인증·통화,
 Asterisk 재시작 후 자동 재접속, `docker pause` 때 하트비트로 끊김 감지 후 복구.
+이 가운데 `docker pause`를 뺀 나머지는 `make e2e`로 자동화했고, CI가 PR과 `main` 푸시마다 돌린다.
 
 ## 문서
 

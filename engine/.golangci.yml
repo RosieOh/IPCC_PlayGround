@@ -1,0 +1,25 @@
+# golangci-lint v2 설정 — `make lint`로 실행한다 (CI도 같은 버전을 쓴다)
+version: "2"
+
+run:
+  build-tags:
+    - e2e # e2e 테스트 파일도 검사한다
+
+linters:
+  # standard = errcheck, govet, ineffassign, staticcheck, unused
+  default: standard
+  enable:
+    # enum switch에서 빠진 case를 잡는다. Rust의 match가 해 주던 일 (docs/07-rust-to-go.md 6절)
+    - exhaustive
+    # 에러 비교·형변환을 ==, 타입 단언 대신 errors.Is/As로 하게 한다 (%w로 감싼 에러도 잡히게)
+    - errorlint
+  settings:
+    exhaustive:
+      # default: 가 있어도 모든 case를 직접 쓰게 한다. 상태가 늘어났을 때 조용히 default로 빠지지 않게
+      default-signifies-exhaustive: false
+  exclusions:
+    presets:
+      # Close(), fmt.Fprint* 처럼 반환 에러를 흔히 무시하는 표준 함수는 errcheck에서 뺀다
+      - std-error-handling
+
+# 포맷(gofmt) 검사는 golangci-lint run이 하지 않으므로 make test에서 한다.

@@ -13,14 +13,19 @@ COMPOSE := docker compose
 AST     := $(COMPOSE) exec asterisk
 AMICLI  := bin/amicli
 
+# golangci-lint는 Docker 이미지로 실행해서 로컬·CI 버전을 똑같이 맞춘다 (.github/workflows/ci.yml과 같은 버전)
+GOLANGCI_LINT_VERSION := v2.14.0
+GOLANGCI := docker run --rm -v "$(CURDIR)/engine:/src" -v ipcc-golangci-cache:/root/.cache -w /src \
+	golangci/golangci-lint:$(GOLANGCI_LINT_VERSION) golangci-lint
+
 # SIPp는 Asterisk 컨테이너 안에서 127.0.0.1로 실행한다.
 # Docker의 NAT를 거치지 않으므로 SIP 시그널링·다이얼플랜·AMI 이벤트 검증에 집중할 수 있다.
 SIPP := $(COMPOSE) exec -T asterisk sipp 127.0.0.1:5060 -i 127.0.0.1 -p 5070 \
 	-key user 9001 -au 9001 -ap sipp9001 -m 1 -nostdin
 
 .PHONY: help up up-lan down restart ps logs cli rx reload sngrep pcap sh \
-	build test watch agent-login agent-logout sim-agents sim-logout sim-call sim-abandon \
-	sip-register sip-echo sip-queue clean clean-data
+	build watch agent-login agent-logout sim-agents sim-logout sim-call sim-abandon \
+	test lint e2e sip-register sip-echo sip-queue clean clean-data
 
 help: ## 이 목록
 	@awk 'BEGIN{FS=":.*## "} /^## /{printf "\n\033[1m%s\033[0m\n", substr($$0,4); next} /^[a-zA-Z_-]+:.*## /{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -70,9 +75,6 @@ sh: ## 컨테이너 셸
 build: ## Go CLI 빌드 → bin/amicli
 	cd engine && go build -o ../bin/amicli ./cmd/amicli
 
-test: ## Go 테스트 (vet + 레이스 검출)
-	cd engine && go vet ./... && go test -race ./...
-
 watch: build ## AMI 이벤트 실시간 보기 + 원본 녹화 (recordings/)
 	$(AMICLI) watch -record recordings
 
@@ -93,6 +95,19 @@ sim-call: build ## 가짜 고객 콜 인입. 예) make sim-call n=5
 
 sim-abandon: build ## 6초 뒤 끊는 고객 콜 (받을 상담원이 없을 때 포기호가 된다)
 	$(AMICLI) sim-call -n $(or $(n),1) -patience 6
+
+## 검증 (CI도 같은 명령을 쓴다)
+test: ## 단위 테스트: gofmt 검사 + go vet + go test -race
+	@cd engine && unformatted="$$(gofmt -l .)"; \
+	 if [ -n "$$unformatted" ]; then echo "gofmt이 필요한 파일 (gofmt -w <파일>로 고친다):"; echo "$$unformatted"; exit 1; fi
+	cd engine && go vet ./... && go test -race ./...
+
+lint: ## golangci-lint: errcheck, exhaustive, errorlint 등 (Docker로 실행)
+	$(GOLANGCI) run ./...
+
+e2e: ## 실제 Asterisk로 콜 흐름 전체 검증. 재시작까지 보려면 E2E_RESTART=1 make e2e
+	$(COMPOSE) up -d
+	cd engine && go test -tags e2e -count=1 -v -timeout 5m ./e2e/
 
 ## SIP 자동 테스트 (SIPp, 컨테이너 안에서 실행)
 sip-register: ## 9001로 등록 (REGISTER → 401 → 인증 → 200)

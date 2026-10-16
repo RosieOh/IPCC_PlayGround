@@ -182,6 +182,28 @@ RingTime: 2
 9. **다른 클라이언트의 로그인도 보인다.** `SuccessfulAuth` 이벤트(보안 클래스)로 온다.
 10. **재시작 뒤에는 큐 멤버가 비어 있다** (`persistentmembers = no`). 엔진이 재접속 후 스냅샷을 보고
     로그인 중인 상담원을 다시 `QueueAdd` 해야 한다 → Stage 2 재동기화.
+11. **AgentComplete가 채널 정보 없이 올 수 있다.** (`make e2e`로 재현)
+    콜 2건이 같은 순간에 끝나면, 나중에 나온 AgentComplete에는 아래 필드만 있고
+    `Channel`·`CallerIDNum`·`Uniqueid`·`Linkedid`(고객 쪽)와 `Dest…`(상담원 쪽)가 통째로 빠진다.
+    이벤트를 만들 때 고객·상담원 채널이 이미 정리되어 채널 스냅샷을 붙이지 못한 경우다. e2e 실행 몇 번에 한 번꼴로 나왔다.
+
+    ```text
+    Event: AgentComplete
+    Privilege: agent,all
+    Timestamp: 1792138283.747839
+    Queue: support
+    Interface: Local/1002@sim-agent
+    MemberName: SIM-1002
+    HoldTime: 1
+    TalkTime: 2
+    Reason: agent
+    ```
+
+    → 상태머신은 AgentComplete를 **상담원(`Interface`/`MemberName`) 기준**으로 처리하고, 어느 콜이었는지는
+    AgentConnect 때 기록해 둔 '상담원 ↔ 콜' 짝으로 찾는다. 콜 ID로만 짝짓는 코드는 가끔 통화 종료를 놓친다.
+12. **같은 정보도 이벤트와 스냅샷에서 필드 이름이 다르다.** 실시간 이벤트(`QueueMemberAdded`, `QueueMemberPause` …)는
+    `MemberName`·`Interface`이고, `QueueStatus` 응답의 `QueueMember`는 `Name`·`Location`이다.
+    재동기화 코드에서 이벤트 처리 함수를 그대로 재사용하면 빈 값을 읽는다.
 
 ## 7. 클라이언트 설계 (`engine/ami`)
 
@@ -236,3 +258,9 @@ Ping 없이는 영원히 모른다. 실측: `docker compose pause` 18초 뒤 감
 - **녹화 재생**: 녹화 파일 = 받은 바이트 그대로라서 같은 `Reader`로 다시 읽힌다. Stage 2의 golden test와
   Rust↔Go 차분 테스트가 이 성질 위에 선다.
 - 모든 테스트는 `-race`로 돌린다 (`make test`). 10회 반복 실행으로 타이밍 의존 테스트가 흔들리지 않는지 확인했다.
+- **e2e** (`make e2e`, `engine/e2e`): 실제 Asterisk에 붙어서 로그인 → 정상 콜 2건 → 포기 → SIPp 등록·통화 → 로그아웃을
+  이벤트로 검증한다. `E2E_RESTART=1`이면 Asterisk 재시작 후 재접속과 녹화 재생까지 본다.
+  고정된 sleep 대신 "기대한 이벤트가 올 때까지 기다리기"로 짜서 느린 환경에서도 흔들리지 않는다.
+  실패하면 그 사이에 받은 이벤트 종류와 개수를 보여 준다. 위 11번 사실도 이 테스트가 찾았다.
+- **CI** (`.github/workflows/ci.yml`): PR과 `main` 푸시마다 `make test`, golangci-lint, `make e2e`(재시작 포함).
+  e2e가 실패하면 Asterisk 로그와 AMI 녹화를 아티팩트로 올린다.

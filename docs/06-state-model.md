@@ -87,7 +87,7 @@ stateDiagram-v2
 | Ringing | 고객이 벨 중에 끊음 | Ready | — | ? 어떤 이벤트가 오는지 |
 | Ringing | AgentConnect | Talking | currentCall 설정 | ✓ |
 | Talking | Hold / Unhold | Hold / Talking | — | ? 어느 채널에 이벤트가 오는지 |
-| Talking, Hold | AgentComplete | ACW | `QueuePause` true(후처리), ACW 타이머 시작 | ✓ 이벤트 |
+| Talking, Hold | AgentComplete (`Interface`로 상담원을 찾는다) | ACW | `QueuePause` true(후처리), ACW 타이머 시작 | ✓ 채널 정보 없이 올 수 있음 |
 | ACW | 명령: 후처리 완료 / 타이머 | Ready | `QueuePause` false | |
 | ACW | (이석 예약 있음) | NotReady(예약 사유) | `QueuePause` true, Reason=사유 | |
 | Ringing, Talking, Hold | 명령: 이석 | (그대로) | 이석 예약만 기록 | 정책 |
@@ -129,7 +129,7 @@ Entered(ARS·멘트) → Queued(대기) → Alerting(상담원 벨) → Connecte
 | AgentConnect | 상담원 Talking, 콜 Connected | ✓ |
 | QueueCallerLeave | 대기열에서 제거 (연결·포기·타임아웃 모두에서 온다) | ✓ |
 | QueueCallerAbandon | 콜 결과 = 포기 | ✓ |
-| AgentComplete | 상담원 ACW, 콜 결과 = 응대완료(Reason) | ✓ |
+| AgentComplete | 상담원 ACW, 콜 결과 = 응대완료(Reason). **상담원(`Interface`)으로 찾고, 콜은 그 상담원의 currentCall로 찾는다** — 채널 정보(`Linkedid` 등)가 빠진 채 올 수 있다 | ✓ (e2e로 재현) |
 | Hold / Unhold | 보류 / 해제 | ? |
 | BlindTransfer / AttendedTransfer | 콜 전환 처리 | ? |
 | BridgeEnter / BridgeLeave | 브리지 구성 갱신 (3명 이상이면 회의) | ✓ (2자) |
@@ -137,7 +137,9 @@ Entered(ARS·멘트) → Queued(대기) → Alerting(상담원 벨) → Connecte
 | QueueMemberAdded / Removed / Pause | 엔진이 기대한 Asterisk 상태와 비교 (불일치면 경고·보정) | ✓ |
 | DeviceStateChange | 무시 (나중에 단말 장애 감지에 쓸 수 있음) | ✓ |
 
-**처리 순서에 기대지 않는다.** AgentComplete는 상담원·고객 채널의 Hangup보다 늦게 올 수 있다 ✓ (05 문서 5절).
+**처리 순서에 기대지 않는다.** AgentComplete는 상담원·고객 채널의 Hangup보다 늦게 올 수 있고 ✓ (05 문서 5절),
+그렇게 늦게 오면 채널 정보 없이 올 수도 있다 ✓ (05 문서 6절 11번).
+**재동기화 코드는 필드 이름에 주의한다.** 스냅샷의 `QueueMember`는 `Name`·`Location`, 이벤트는 `MemberName`·`Interface`다 ✓.
 "채널 Hangup → 통화 끝"과 "AgentComplete → 후처리 시작"을 따로 처리하고, 둘 중 무엇이 먼저 와도 결과가 같게 만든다.
 
 ## 7. 재동기화

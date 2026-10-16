@@ -1,0 +1,94 @@
+# 푸시와 PR마다 로컬과 같은 make 명령으로 검증한다.
+#   go  — make test (gofmt, vet, race) + golangci-lint
+#   e2e — 실제 Asterisk 컨테이너로 콜 흐름 전체 (make e2e, 재시작 후 재접속 포함)
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# 같은 브랜치에 새 커밋이 오면 앞선 실행은 취소한다
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Dockerfile의 ARG, docker-compose.yml의 기본값과 같아야 한다
+  ASTERISK_VERSION: 22.11.0
+
+jobs:
+  go:
+    name: 단위 테스트 · lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: engine/go.mod
+          cache: false # 외부 의존성이 없다 (표준 라이브러리만 쓴다)
+
+      - name: gofmt · go vet · go test -race
+        run: make test
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0 # Makefile의 GOLANGCI_LINT_VERSION과 같게
+          working-directory: engine
+
+  e2e:
+    name: E2E (실제 Asterisk)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: engine/go.mod
+          cache: false
+
+      - uses: docker/setup-buildx-action@v4
+
+      # Asterisk 소스 빌드는 몇 분 걸리므로 레이어를 GitHub Actions 캐시에 둔다.
+      # 태그를 docker-compose.yml의 image와 같게 해서, make e2e가 다시 빌드하지 않고 이 이미지를 쓰게 한다.
+      - name: Asterisk 이미지 빌드 (캐시 사용)
+        uses: docker/build-push-action@v7
+        with:
+          context: asterisk
+          load: true
+          build-args: ASTERISK_VERSION=${{ env.ASTERISK_VERSION }}
+          tags: ipcc-playground/asterisk:${{ env.ASTERISK_VERSION }}
+          cache-from: type=gha,scope=asterisk
+          cache-to: type=gha,scope=asterisk,mode=max
+
+      - name: E2E — 로그인, 정상·포기·SIP 콜, 로그아웃, 재시작 후 재접속
+        run: make e2e
+        env:
+          E2E_RESTART: "1"
+          E2E_RECORD_DIR: ${{ runner.temp }}/ami-recordings
+
+      - name: 실패 시 Asterisk 로그 모으기
+        if: failure()
+        run: |
+          mkdir -p "$RUNNER_TEMP/asterisk-logs"
+          docker compose logs --no-color asterisk > "$RUNNER_TEMP/asterisk-logs/console.log" 2>&1 || true
+          sudo cp -r data/asterisk/log/. "$RUNNER_TEMP/asterisk-logs/" || true
+          sudo chmod -R a+rX "$RUNNER_TEMP/asterisk-logs" || true
+
+      - name: 실패 시 로그·AMI 녹화 올리기
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-logs
+          path: |
+            ${{ runner.temp }}/asterisk-logs
+            ${{ runner.temp }}/ami-recordings
+          if-no-files-found: ignore
+          retention-days: 7
