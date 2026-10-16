@@ -15,7 +15,7 @@
 ```bash
 make up            # Asterisk 이미지 빌드(첫 실행 몇 분) + 기동
 make logs          # 'Asterisk Ready.'가 보이면 Ctrl+C
-make test          # Go 테스트
+make test          # 단위 테스트 (gofmt + vet + race)
 
 # 터미널 1
 make watch         # AMI 이벤트 실시간 보기 (recordings/에 녹화)
@@ -27,6 +27,17 @@ make sip-echo      # SIP 인증·통화 자동 테스트 (Successful call 1)
 ```
 
 `make`만 치면 전체 명령 목록이 나온다.
+
+**코드나 설정을 바꾼 뒤에는 세 가지를 돌린다.** CI(`.github/workflows/ci.yml`)도 PR마다 같은 명령을 쓴다.
+
+| 명령 | 걸리는 시간 | 보는 것 |
+|---|---|---|
+| `make test` | 몇 초 | gofmt, go vet, 단위 테스트(`-race`) |
+| `make lint` | 몇십 초 (첫 실행은 이미지 내려받기) | errcheck, exhaustive, errorlint 등 (golangci-lint를 Docker로) |
+| `make e2e` | 약 30초 | 실제 Asterisk로 로그인 → 정상·포기·SIP 콜 → 로그아웃. `E2E_RESTART=1 make e2e`면 재시작 후 재접속까지 |
+
+`make e2e`는 실제 상담원(소프트폰)이 큐에 로그인돼 있거나 통화 중인 채널이 있으면 시작하지 않는다.
+e2e 콜이 사람의 전화기로 가지 않게 하기 위해서다.
 
 ## 3. 소프트폰 연결
 
@@ -116,6 +127,9 @@ make agent-logout ext=1001
 | `watch`에 기대한 이벤트가 안 보임 | 기본 필터가 Newexten 등을 숨긴다 | `-all` 또는 `-only 이벤트이름` |
 | 로그 시각이 9시간 어긋남 | 시간대 | `.env`의 `TZ` 확인 후 `make restart` |
 | 설정을 고쳤는데 반영이 안 됨 | reload 필요 | `make reload`. transport 템플릿·환경변수는 `make restart` |
+| `make e2e`가 "실제 상담원 … 로그인돼 있어"로 멈춤 | 소프트폰 상담원이 support 큐에 있다 | `make agent-logout ext=1001` 후 다시 |
+| `make e2e`가 "통화 중인 채널이 있어"로 멈춤 | 진행 중인 통화가 있다 | 통화를 끝내거나 `make rx c="channel request hangup all"` |
+| CI의 e2e만 실패 | 환경 차이 (Linux 러너) | 실행 화면의 Artifacts에서 `e2e-logs`(Asterisk 로그, AMI 녹화)를 받아 `bin/amicli replay`로 본다 |
 
 ## 7. 초기화
 
