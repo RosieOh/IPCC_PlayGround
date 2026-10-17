@@ -3,16 +3,17 @@
 미니 IPCC를 7단계로 만든다. 단계마다 **제공된 것**(이미 있는 것), **직접 해볼 것**(학습 과제), **완료 기준**이 있다.
 체크박스는 진행하면서 직접 채운다.
 
-Stage 0~1은 바로 실험할 수 있도록 레퍼런스 구현을 넣어 두었다. 다만 회사 업무가 "에이전트가 만든 코드를
-읽고, 검증하고, 고치는 일"에 가깝기 때문에, 이 두 단계는 **읽고 설명하고 바꿔 보는 것**이 과제다.
-Stage 2부터는 설계 문서만 있고 구현은 직접 한다.
+처음에는 Stage 0~1만 레퍼런스로 넣고 Stage 2부터는 직접 구현하도록 남겨 두었다. 이후 요청에 따라 Stage 0~2의 과제도
+에이전트가 구현하고 해설을 붙였다(✅ 표시). 회사 업무가 "에이전트가 만든 코드를 읽고, 검증하고, 고치는 일"에 가까우니,
+✅ 항목은 **해설을 보기 전에 스스로 답해 보고, 코드를 읽고 설명하고 바꿔 보는 것**으로 공부하면 된다.
+귀로 듣고 눈으로 보는 항목(소프트폰 통화, sngrep, Wireshark)은 사람 몫으로 남아 있다.
 
 ## 진행 현황
 
 | Stage | 주제 | 예상 기간 | 상태 |
 |---|---|---|---|
-| 0 | 전화부터 걸어보기 (Asterisk, SIP) | 3~5일 | 환경 제공 ✅ / 과제 진행 전 |
-| 1 | Go AMI 클라이언트 | 1~2주 | 레퍼런스 제공 ✅ / 과제 진행 전 |
+| 0 | 전화부터 걸어보기 (Asterisk, SIP) | 3~5일 | 환경 ✅ / 자동화·해설 ✅ / 소프트폰·Wireshark는 사람 몫 |
+| 1 | Go AMI 클라이언트 | 1~2주 | 레퍼런스 ✅ / 과제 4개 구현 ✅ / 이벤트 사전 ✅ |
 | 2 | 상태머신: 콜·상담원·큐 (Rust→Go 리허설) | 2~3주 | 설계 초안 ([06](06-state-model.md), [07](07-rust-to-go.md)) |
 | 3 | 실시간 모니터링 (Node.js 게이트웨이, 화면) | 1~2주 | 계획 |
 | 4 | MySQL 이력·통계 | 1~2주 | 계획 |
@@ -38,17 +39,23 @@ Stage 2부터는 설계 문서만 있고 구현은 직접 한다.
   - 이 검사가 첫 NAT 설정의 결함(SDP에 컨테이너 IP가 적힘)을 잡았고 고쳤다 (04 문서 6절, D-014)
 - 컨테이너 안의 sngrep, tcpdump, Asterisk 소스(`/usr/src/asterisk`)
 
-**직접 해볼 것**
-- [ ] `make rtp-check`로 서버 쪽 음성 경로가 정상인지 먼저 본다
-- [ ] Linphone(Mac)으로 1001 등록 → 600에 걸어 내 목소리가 돌아오는지 듣기 ([08-runbook.md](08-runbook.md#3-소프트폰-연결))
-- [ ] 두 번째 소프트폰으로 1002 등록 → 1001과 1002 사이 통화 (휴대폰을 쓰려면 `make up-lan`)
-- [ ] `make sngrep`을 켜 둔 채 등록·통화 → 래더에서 REGISTER/401/200, INVITE~BYE를 하나씩 설명하기
-- [ ] 200 OK의 SDP에서 c=, m= 줄을 읽고 어떤 주소·포트·코덱으로 정해졌는지 말하기
-- [ ] **일부러 고장 내기**: `asterisk/conf/pjsip_transport.conf.tmpl`에서 `local_net = @CONTAINER_IP@/32` 줄을 지우고
-  `make restart` → `make rtp-check` 실패와 Linphone의 "연결은 되는데 소리가 안 들림"을 재현 → sngrep으로 원인을 찾고 되돌리기
+**직접 해볼 것** (✅ = 자동화했거나 해설을 넣어 둠. 귀로 듣고 눈으로 보는 항목은 사람 몫으로 남겨 뒀다)
+- [x] `make rtp-check`로 서버 쪽 음성 경로가 정상인지 먼저 본다 → Mac에서 보냄 100 / 받음 96 확인, e2e와 CI가 매번 확인
+- [ ] Linphone(Mac)으로 1001 등록 → 600에 걸어 내 목소리가 돌아오는지 듣기 ([08-runbook.md](08-runbook.md#3-소프트폰-연결)) — 사람 몫
+- [ ] 두 번째 소프트폰으로 1002 등록 → 1001과 1002 사이 통화 (휴대폰을 쓰려면 `make up-lan`) — 사람 몫
+- [x] 래더에서 REGISTER/401/200, INVITE~BYE를 하나씩 설명하기 → 해설: [04 문서 2·3절](04-sip-sdp-rtp.md#2-등록-register)
+  (실제 캡처한 메시지 포함). sngrep으로 직접 보는 것은 사람 몫
+- [x] 200 OK의 SDP에서 c=, m= 줄을 읽고 주소·포트·코덱 말하기 → 해설: [04 문서 4절](04-sip-sdp-rtp.md#4-sdp-읽는-법)
+- [x] **일부러 고장 내기** → 실제로 이 결함이 있었다. 첫 설정에서 `rtp-check`가 SDP의 `c=172.23.0.2`로 잡았고,
+  원인(local_net 조건)과 수정은 [04 문서 6절](04-sip-sdp-rtp.md#6-nat와-연결은-되는데-소리가-안-들려요)·D-014.
+  다시 해 보려면 `local_net = @CONTAINER_IP@/32` 줄을 지우고 `make restart` → `make rtp-check`
 - [ ] `engine/rtpcheck`를 sngrep 트레이스와 나란히 읽기 — SIP를 직접 말하는 최소 구현 (Digest 인증, SDP, RTP 헤더)
-- [ ] `make pcap`으로 캡처 → Wireshark의 Telephony › VoIP Calls에서 통화를 찾아 RTP 재생
-- [ ] `make sh` → `/usr/src/asterisk/apps/app_queue.c`에서 `AgentConnect` 이벤트를 만드는 곳 찾아보기
+- [ ] `make pcap`으로 캡처 → Wireshark의 Telephony › VoIP Calls에서 통화를 찾아 RTP 재생 — 사람 몫
+- [x] `make sh` → `/usr/src/asterisk/apps/app_queue.c`에서 `AgentConnect` 이벤트를 만드는 곳 찾아보기 → 해설:
+  `try_calling()`에서 상담원이 받으면 Queue·Interface·MemberName·HoldTime·RingTime을 JSON으로 묶어
+  `queue_publish_multi_channel_blob(고객, 상담원, queue_agent_connect_type(), …)`로 내보낸다.
+  AMI 텍스트로 바꾸는 곳은 `queue_agent_connect_to_ami()` → `queue_multi_channel_to_ami()`이고, 여기서
+  고객 스냅샷은 접두사 없이, 상담원 스냅샷은 `Dest` 접두사를 붙여 이어 붙인다 (05 문서 5절의 필드 모양이 이렇게 나온다)
 
 **완료 기준**
 - [ ] REGISTER와 INVITE~BYE 흐름을 보지 않고 그려서 설명할 수 있다
@@ -74,20 +81,20 @@ Stage 2부터는 설계 문서만 있고 구현은 직접 한다.
 - CI (`.github/workflows/ci.yml`): PR과 `main` 푸시마다 `make test`, golangci-lint, `make e2e`
 - e2e가 찾은 사실: **AgentComplete가 채널 정보 없이 올 수 있다** (05 문서 6절 11번). Stage 2 설계에 바로 영향을 준다
 
-**직접 해볼 것** — 읽고, 설명하고, 바꿔 보기
-- [ ] `client.go`의 고루틴 구성을 그림으로 그리기: 연결 하나에 고루틴이 몇 개고, 채널은 어디서 어디로 흐르나
-- [ ] `make watch`를 켜 두고 `docker compose restart asterisk` → 출력 해석.
-  `docker compose pause asterisk` 30초 → 왜 바로 끊기지 않고 약 20초 뒤에 끊기는지 설명 (PingInterval + PingTimeout)
-- [ ] `amicli replay -all -v`로 샘플 녹화를 읽으며 **이벤트 사전** 만들기: 이벤트마다 어떤 필드가 오는지
-- [ ] 과제: `amicli stats <녹화>` 추가 — 이벤트 종류별 개수, 콜(Linkedid)별 이벤트 수
-- [ ] 과제: 이벤트 큐 적체(`QueueDepth`)가 1,000을 넘으면 경고 로그 남기기 (+ 테스트)
-- [ ] 과제: `Command` 액션의 `Output` 여러 줄을 사람이 보기 좋게 출력
-- [ ] 과제: MD5 챌린지 로그인(`Action: Challenge` → `AuthType: md5`) 옵션 추가
+**직접 해볼 것** — 읽고, 설명하고, 바꿔 보기 (✅ = 구현·해설을 넣어 둠. 해설을 보기 전에 먼저 스스로 답해 보면 좋다)
+- [x] `client.go`의 고루틴 구성을 그림으로 그리기 → 해설: [05 문서 7절 "고루틴과 채널"](05-ami.md#고루틴과-채널)
+- [x] `docker compose pause asterisk` 30초 → 왜 바로 끊기지 않고 최대 20초 뒤에 끊기는지 → 해설: [05 문서 7절](05-ami.md#타임아웃과-재접속)
+- [x] **이벤트 사전** 만들기 → [10-event-dictionary.md](10-event-dictionary.md) (`make event-dict`로 녹화에서 자동 생성, 의미 칸 포함)
+- [x] 과제: `amicli stats <녹화>` — 이벤트 종류별 개수, 콜(Linkedid)별 이벤트 수, `-fields`, `-md`
+- [x] 과제: 이벤트 큐 적체 경고 — `Config.QueueWarnDepth`(기본 1,000), 절반 아래로 내려오면 해소 로그 (`TestQueueDepthWarning`)
+- [x] 과제: `Command` 액션 출력 정리 — `amicli action Command Command="queue show support"`가 CLI 출력처럼 나온다
+- [x] 과제: MD5 챌린지 로그인 — `Config.AuthMD5`, `amicli … -md5` (`TestMD5ChallengeLogin`, 실제 Asterisk로 확인)
+- [ ] 새 과제: `amicli stats`에 콜별 대기시간·통화시간 집계 추가 (Stage 4 통계의 예습)
 
 **완료 기준**
 - [x] 통화 중 Asterisk를 재시작해도 자동으로 다시 붙고, 스냅샷이 실제와 맞는다 (검증됨)
-- [ ] 위 과제 중 2개 이상을 테스트와 함께 구현했다
-- [ ] "왜 읽기 루프를 막으면 안 되나", "왜 재접속 뒤 스냅샷이 필요한가"를 설명할 수 있다
+- [x] 위 과제 중 2개 이상을 테스트와 함께 구현했다 (4개 모두)
+- [ ] "왜 읽기 루프를 막으면 안 되나", "왜 재접속 뒤 스냅샷이 필요한가"를 설명할 수 있다 — 사람 몫
 
 ---
 

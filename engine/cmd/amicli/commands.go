@@ -125,6 +125,10 @@ func runAction(ctx context.Context, args []string) error {
 	defer stop()
 
 	resp, items, err := c.SendList(ctx, act)
+	if strings.EqualFold(act.Get("Action"), "Command") && !*asJSON && err == nil {
+		printCommandOutput(os.Stdout, resp)
+		return nil
+	}
 	for _, m := range append([]ami.Message{resp}, items...) {
 		if len(m.Fields) == 0 {
 			continue

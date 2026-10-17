@@ -27,7 +27,7 @@ SIPP_AGENT := $(COMPOSE) exec -T asterisk sipp -i 127.0.0.1 -p 5072 -mp 6100 -m 
 
 .PHONY: help up up-lan down restart ps logs cli rx reload sngrep pcap sh \
 	build watch agent-login agent-logout sim-agents sim-logout sim-call sim-abandon \
-	test lint e2e rtp-check sip-register sip-echo sip-queue sip-agent-call clean clean-data
+	test lint e2e rtp-check event-dict sip-register sip-echo sip-queue sip-agent-call clean clean-data
 
 help: ## 이 목록
 	@awk 'BEGIN{FS=":.*## "} /^## /{printf "\n\033[1m%s\033[0m\n", substr($$0,4); next} /^[a-zA-Z_-]+:.*## /{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -113,6 +113,9 @@ e2e: ## 실제 Asterisk로 콜 흐름 전체 검증. 재시작까지 보려면 E
 
 rtp-check: ## 음성(RTP) 경로 검사: 이 Mac에서 602(에코)로 걸어 RTP가 양방향으로 오가는지 센다
 	cd engine && go run ./cmd/rtpcheck
+
+event-dict: build ## AMI 이벤트 사전 다시 만들기 (engine/testdata 녹화 → docs/10-event-dictionary.md)
+	$(AMICLI) stats -md engine/testdata/*.log > docs/10-event-dictionary.md
 
 ## SIP 자동 테스트 (SIPp, 컨테이너 안에서 실행)
 sip-register: ## 9001로 등록 (REGISTER → 401 → 인증 → 200)

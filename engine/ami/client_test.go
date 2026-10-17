@@ -3,11 +3,13 @@ package ami
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -402,6 +404,83 @@ func TestPingTimeoutForcesReconnect(t *testing.T) {
 	fc2 := f.accept()
 	fc2.acceptLogin()
 	expectKind(t, c, KindConnected, 2)
+}
+
+// MD5 챌린지 로그인: 비밀번호 대신 MD5(challenge + secret)만 보낸다.
+func TestMD5ChallengeLogin(t *testing.T) {
+	f := newFakeAMI(t)
+	c, _ := startClient(t, f.addr(), func(cfg *Config) { cfg.AuthMD5 = true })
+	fc := f.accept()
+
+	ch := fc.readAction()
+	if ch.Get("Action") != "Challenge" || ch.Get("AuthType") != "MD5" {
+		t.Fatalf("first action = %v, want Challenge AuthType=MD5", ch)
+	}
+	fc.send("Response", "Success", "ActionID", ch.ActionID(), "Challenge", "840415273")
+
+	login := fc.readAction()
+	if _, ok := login.Lookup("Secret"); ok {
+		t.Fatal("MD5 login must not send the secret")
+	}
+	if login.Get("AuthType") != "MD5" || login.Get("Key") != md5hex("840415273secret") {
+		t.Fatalf("login = %v, want AuthType=MD5 Key=md5(challenge+secret)", login)
+	}
+	fc.send("Response", "Success", "ActionID", login.ActionID(), "Message", "Authentication accepted")
+	expectKind(t, c, KindConnected, 1)
+}
+
+// 소비자가 읽지 않으면 적체 경고를 한 번만 내고, 비워지면 해소를 한 번 알린다.
+func TestQueueDepthWarning(t *testing.T) {
+	logs := &captureHandler{}
+	f := newFakeAMI(t)
+	c, _ := startClient(t, f.addr(), func(cfg *Config) {
+		cfg.QueueWarnDepth = 5
+		cfg.Logger = slog.New(logs)
+	})
+	fc := f.accept()
+	fc.acceptLogin()
+	expectKind(t, c, KindConnected, 1)
+
+	for i := range 20 { // 아무도 읽지 않는 동안 20개를 쌓는다
+		fc.send("Event", "Newexten", "Priority", strconv.Itoa(i))
+	}
+	eventually(t, func() bool { return c.QueueDepth() == 20 })
+	if got := logs.count("이벤트 적체: 소비자가 이벤트를 제때 가져가지 않는다"); got != 1 {
+		t.Fatalf("warnings = %d, want exactly 1 while depth grew 5 → 20", got)
+	}
+
+	for range 20 {
+		expectKind(t, c, KindAMI, 1)
+	}
+	eventually(t, func() bool { return logs.count("이벤트 적체 해소") == 1 })
+}
+
+// captureHandler는 테스트에서 로그 메시지를 모은다.
+type captureHandler struct {
+	mu   sync.Mutex
+	msgs []string
+}
+
+func (h *captureHandler) Enabled(context.Context, slog.Level) bool { return true }
+func (h *captureHandler) WithAttrs([]slog.Attr) slog.Handler       { return h }
+func (h *captureHandler) WithGroup(string) slog.Handler            { return h }
+func (h *captureHandler) Handle(_ context.Context, r slog.Record) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.msgs = append(h.msgs, r.Message)
+	return nil
+}
+
+func (h *captureHandler) count(msg string) int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	n := 0
+	for _, m := range h.msgs {
+		if m == msg {
+			n++
+		}
+	}
+	return n
 }
 
 func TestSendWithoutConnection(t *testing.T) {

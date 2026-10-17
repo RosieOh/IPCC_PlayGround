@@ -14,7 +14,7 @@ func TestPumpNeverBlocksProducer(t *testing.T) {
 	done := make(chan struct{})
 	defer close(done)
 	var depth atomic.Int64
-	go pump(in, out, &depth, done)
+	go pump(in, out, &depth, done, nil)
 
 	const n = 10000
 	sent := make(chan struct{})
@@ -43,7 +43,7 @@ func TestPumpFlushesAndClosesWhenInputCloses(t *testing.T) {
 	in := make(chan int)
 	out := make(chan int)
 	var depth atomic.Int64
-	go pump(in, out, &depth, make(chan struct{}))
+	go pump(in, out, &depth, make(chan struct{}), nil)
 
 	for i := range 3 {
 		in <- i

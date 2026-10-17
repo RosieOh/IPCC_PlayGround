@@ -188,7 +188,9 @@ RingTime: 2
 11. **AgentComplete가 채널 정보 없이 올 수 있다.** (`make e2e`로 재현)
     콜 2건이 같은 순간에 끝나면, 나중에 나온 AgentComplete에는 아래 필드만 있고
     `Channel`·`CallerIDNum`·`Uniqueid`·`Linkedid`(고객 쪽)와 `Dest…`(상담원 쪽)가 통째로 빠진다.
-    이벤트를 만들 때 고객·상담원 채널이 이미 정리되어 채널 스냅샷을 붙이지 못한 경우다. e2e 실행 몇 번에 한 번꼴로 나왔다.
+    e2e 실행 몇 번에 한 번꼴로 나왔다. 원인은 소스에 있다(`apps/app_queue.c`): AgentComplete는 Hangup을 받은 **뒤**
+    `handle_hangup()`에서 보내는데, 이때 채널 정보를 `ast_channel_snapshot_get_latest()`로 캐시에서 다시 찾는다.
+    그사이 두 채널이 다 정리되어 캐시에서 지워졌으면 스냅샷이 없고, `queue_multi_channel_to_ami()`는 그 부분을 빈 채로 둔다.
 
     ```text
     Event: AgentComplete
@@ -235,6 +237,30 @@ RingTime: 2
 | ActionID = `<호스트>-<pid>-<순번>` | 다른 세션 이벤트에 달린 ActionID와 겹치지 않게 |
 | 끊기면 기다리던 액션을 **즉시** 실패 (`ErrDisconnected`) | 타임아웃(10초)까지 붙잡혀 있지 않게 |
 | 녹화는 **받은 바이트만, 로그인 성공한 연결만** | 보낸 Secret은 파일에 남지 않고, 재접속 시도마다 빈 파일이 생기지 않는다 |
+| 적체 경고는 **경고선에서 한 번, 절반 아래에서 해소 한 번** | 경고선 근처에서 깊이가 오르내려도 로그가 쏟아지지 않게 (`QueueWarnDepth`) |
+| MD5 챌린지 로그인 선택 (`AuthMD5`) | 평문 AMI에서도 비밀번호 자체는 흘리지 않는다. Key = MD5(challenge + secret) |
+
+### 고루틴과 채널
+
+Stage 1 과제 "고루틴 구성을 그려 보라"의 답이다. `Run` 하나가 살아 있는 동안:
+
+| 고루틴 | 수명 | 하는 일 |
+|---|---|---|
+| `Run` (부른 쪽 고루틴) | 클라이언트 전체 | 접속 → `handshake`(동기 로그인) → 세션 대기 → 백오프 → 재접속을 반복. `session`도 여기서 돈다 |
+| `pump` | 클라이언트 전체 | `in` → 내부 슬라이스 → `out`. 소비자 속도와 관계없이 `in`을 계속 비운다 |
+| `readLoop` | 연결 하나 | 소켓에서 메시지를 읽어 ① `pending[ActionID]`에 넣거나 ② `in`으로 보낸다 |
+| `pingLoop` | 연결 하나 | 15초마다 `Send(Ping)`. 실패하면 `pingFailed`로 알린다 |
+| `Send`/`SendList`를 부른 고루틴 | 요청 하나 | 쓰기(`writeMu`) 후 `pending.done`이 닫힐 때까지 기다린다 |
+
+즉 연결 하나에 고정 고루틴은 4개(`Run`, `pump`, `readLoop`, `pingLoop`)이고, 요청마다 부른 쪽 고루틴이 잠깐 기다린다.
+
+| 채널 | 보내는 쪽 → 받는 쪽 | 내용 |
+|---|---|---|
+| `in` | `readLoop`, `session` → `pump` | AMI 이벤트, `Connected`/`Disconnected` (같은 채널이라 순서가 섞이지 않는다) |
+| `out` (`Events()`) | `pump` → 소비자 | 위와 같은 순서 그대로 |
+| `pendingAction.done` | `readLoop`(응답 도착) 또는 `dropConn`(끊김) → `Send` 호출자 | 닫히면 결과가 준비된 것 |
+| `readerDone` | `readLoop` → `session` | 읽기가 끝났다 (끊김) |
+| `pingFailed` | `pingLoop` → `session` | Ping에 답이 없다 → 연결을 끊고 재접속 |
 
 ### 타임아웃과 재접속
 
@@ -247,6 +273,10 @@ RingTime: 2
 
 TCP 연결이 살아 있는데 상대가 답하지 않는 경우(프로세스 정지, 중간 장비 장애)는 읽기 오류가 나지 않는다.
 Ping 없이는 영원히 모른다. 실측: `docker compose pause` 18초 뒤 감지, `unpause` 즉시 재접속.
+
+**왜 바로가 아니라 5~20초 뒤인가** (Stage 1 과제의 답): 멈춘 순간부터 다음 Ping이 나갈 때까지 0~15초(PingInterval),
+그 Ping의 응답을 기다리는 5초(PingTimeout)가 더해진다. 그래서 감지까지 최소 5초, 최대 20초다.
+실측 18초는 멈춘 지 약 13초 뒤에 Ping이 나갔다는 뜻이다. 더 빨리 알아야 하면 간격을 줄이되, Ping도 AMI 부하라는 점을 같이 본다.
 
 ### 재동기화
 

@@ -3,6 +3,8 @@ package ami
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -45,6 +47,14 @@ type Config struct {
 	// Events는 Login 때 받을 이벤트 범위다.
 	// "on"(기본, 전부) / "off"(안 받음) / "call,agent"처럼 클래스 지정.
 	Events string
+
+	// AuthMD5면 비밀번호를 그대로 보내지 않는 챌린지 방식으로 로그인한다.
+	// Action: Challenge로 받은 문자열에 비밀번호를 붙여 MD5한 값(Key)만 보낸다.
+	AuthMD5 bool
+
+	// QueueWarnDepth는 소비자가 가져가지 않은 이벤트가 이만큼 쌓이면 경고 로그를 남긴다.
+	// 기본 1000, 음수면 끈다. 절반 아래로 내려오면 해소 로그를 남긴다.
+	QueueWarnDepth int64
 
 	DialTimeout   time.Duration // 기본 5s
 	ActionTimeout time.Duration // ctx에 데드라인이 없을 때 응답을 기다리는 시간. 기본 10s
@@ -90,6 +100,9 @@ func (cfg Config) withDefaults() Config {
 	}
 	if cfg.BackoffMax == 0 {
 		cfg.BackoffMax = 30 * time.Second
+	}
+	if cfg.QueueWarnDepth == 0 {
+		cfg.QueueWarnDepth = 1000
 	}
 	if cfg.ActionIDPrefix == "" {
 		host, _ := os.Hostname()
@@ -154,9 +167,10 @@ type Client struct {
 	cfg Config
 	log *slog.Logger
 
-	in    chan Event // readLoop → pump
-	out   chan Event // pump → 소비자
-	depth atomic.Int64
+	in         chan Event // readLoop → pump
+	out        chan Event // pump → 소비자
+	depth      atomic.Int64
+	backlogged bool // 적체 경고를 낸 상태인지. pump 고루틴에서만 읽고 쓴다
 
 	seq     atomic.Uint64
 	running atomic.Bool
@@ -217,7 +231,7 @@ func (c *Client) Run(ctx context.Context) error {
 	if !c.running.CompareAndSwap(false, true) {
 		return errors.New("ami: Run called twice")
 	}
-	go pump(c.in, c.out, &c.depth, ctx.Done())
+	go pump(c.in, c.out, &c.depth, ctx.Done(), c.observeDepth)
 	defer close(c.in) // session은 readLoop가 끝난 뒤에만 돌아오므로, 여기서는 아무도 in에 쓰지 않는다
 
 	backoff := c.cfg.BackoffMin
@@ -238,6 +252,24 @@ func (c *Client) Run(ctx context.Context) error {
 			return nil
 		}
 		backoff = min(backoff*2, c.cfg.BackoffMax)
+	}
+}
+
+// observeDepth는 이벤트 큐 깊이가 바뀔 때마다 pump 고루틴에서 불린다.
+// 경고선을 넘으면 한 번만 경고하고, 절반 아래로 내려와야 해소를 알린다.
+// 경고선 근처에서 깊이가 오르내릴 때 로그가 쏟아지지 않게 하려는 것이다.
+func (c *Client) observeDepth(depth int64) {
+	limit := c.cfg.QueueWarnDepth
+	if limit <= 0 {
+		return
+	}
+	switch {
+	case !c.backlogged && depth >= limit:
+		c.backlogged = true
+		c.log.Warn("이벤트 적체: 소비자가 이벤트를 제때 가져가지 않는다", "depth", depth, "limit", limit)
+	case c.backlogged && depth <= limit/2:
+		c.backlogged = false
+		c.log.Info("이벤트 적체 해소", "depth", depth)
 	}
 }
 
@@ -337,32 +369,51 @@ func (c *Client) handshake(conn net.Conn, r *Reader) (version string, err error)
 		return "", fmt.Errorf("banner: %w", err)
 	}
 
-	id := c.nextActionID()
-	wire, err := NewAction("Login").
-		With("Username", c.cfg.Username).
-		With("Secret", c.cfg.Secret).
-		With("Events", c.cfg.Events).
-		withActionID(id).
-		Encode()
-	if err != nil {
+	login := NewAction("Login").With("Username", c.cfg.Username)
+	if c.cfg.AuthMD5 {
+		resp, err := c.request(conn, r, NewAction("Challenge").With("AuthType", "MD5"))
+		if err != nil {
+			return "", fmt.Errorf("challenge: %w", err)
+		}
+		login = login.With("AuthType", "MD5").With("Key", md5hex(resp.Get("Challenge")+c.cfg.Secret))
+	} else {
+		login = login.With("Secret", c.cfg.Secret)
+	}
+	if _, err := c.request(conn, r, login.With("Events", c.cfg.Events)); err != nil {
 		return "", fmt.Errorf("login: %w", err)
 	}
+	return version, nil
+}
+
+// request는 readLoop가 뜨기 전(로그인 단계)에 쓰는 동기 요청이다. 짝이 맞는 응답이 올 때까지 읽는다.
+// 로그인 전에는 이벤트가 오지 않으므로 다른 메시지를 버려도 잃는 것이 없다.
+func (c *Client) request(conn net.Conn, r *Reader, act Message) (Message, error) {
+	id := c.nextActionID()
+	wire, err := act.withActionID(id).Encode()
+	if err != nil {
+		return Message{}, err
+	}
 	if _, err := conn.Write(wire); err != nil {
-		return "", fmt.Errorf("login: %w", err)
+		return Message{}, err
 	}
 	for {
 		msg, err := r.ReadMessage()
 		if err != nil {
-			return "", fmt.Errorf("login: %w", err)
+			return Message{}, err
 		}
 		if !msg.IsResponse() || msg.ActionID() != id {
 			continue
 		}
 		if !strings.EqualFold(msg.Get("Response"), "Success") {
-			return "", &ResponseError{Action: "Login", Message: msg.Get("Message"), Response: msg}
+			return msg, &ResponseError{Action: act.Get("Action"), Message: msg.Get("Message"), Response: msg}
 		}
-		return version, nil
+		return msg, nil
 	}
+}
+
+func md5hex(s string) string {
+	sum := md5.Sum([]byte(s))
+	return hex.EncodeToString(sum[:])
 }
 
 // readLoop는 연결이 끊길 때까지 메시지를 읽어서 나눠 준다.
