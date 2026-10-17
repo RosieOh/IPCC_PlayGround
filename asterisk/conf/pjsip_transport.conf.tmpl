@@ -1,22 +1,28 @@
 ;
 ; pjsip_transport.conf.tmpl — SIP 트랜스포트(NAT) 템플릿
 ;
-; 컨테이너가 시작될 때 entrypoint.sh가 @EXTERNAL_IP@ 를 실제 값으로 바꿔서
+; 컨테이너가 시작될 때 entrypoint.sh가 @EXTERNAL_IP@, @CONTAINER_IP@를 실제 값으로 바꿔서
 ; /etc/asterisk-generated/pjsip_transport.conf 를 만든다. 이 파일을 고쳤다면 `make restart`.
 ;
 ; 왜 필요한가 (Mac Docker Desktop):
 ;   소프트폰(Mac) ─▶ 127.0.0.1:5060 ─▶ [Docker Desktop 포트포워딩] ─▶ 컨테이너(172.x.x.x)
 ;   Asterisk는 자기 IP(172.x.x.x)를 SIP 헤더와 SDP의 c= 라인에 적으려 하지만,
 ;   Mac에서는 그 주소로 갈 수 없다 → "바깥에서 보이는 주소"(EXTERNAL_IP)를 대신 적게 한다.
-;   이걸 안 하면 "연결은 되는데 소리가 안 들림"이 생긴다. (docs/04-sip-sdp-rtp.md)
+;   이걸 안 하면 "연결은 되는데 소리가 안 들림"이 생긴다. (docs/04-sip-sdp-rtp.md 6절)
+;
+; Asterisk가 주소를 바꿔 적는 조건은 두 가지다 (res_pjsip_nat.c, res_pjsip_sdp_rtp.c에서 확인):
+;   1) 받는 쪽이 local_net 밖이어야 한다.
+;      포트포워딩을 거친 Mac의 패킷은 컨테이너 안에서 Docker 게이트웨이(172.x.0.1)에서 온 것으로 보인다.
+;   2) 자기 SDP 주소(컨테이너 IP)는 local_net 안이어야 한다. ("내 주소가 사설일 때만 바꾼다")
+; 그래서 local_net에는 컨테이너 자신(@CONTAINER_IP@)과 컨테이너 안의 클라이언트(127.0.0.1)만 넣고,
+; 게이트웨이를 포함하는 대역(172.16.0.0/12 등)은 넣지 않는다.
+; 처음에는 127.0.0.1만 넣었다가 2)를 어겨서 주소가 바뀌지 않았다 — make rtp-check가 잡았다 (D-014).
 ;
 [transport-udp]
 type = transport
 protocol = udp
 bind = 0.0.0.0:5060
-; local_net에 속한 상대에게는 원래 주소를, 그 밖의 상대에게는 external_* 주소를 알려준다.
-; 포트포워딩을 거쳐 온 패킷은 출발지가 Docker 내부 사설 IP로 보이므로,
-; local_net을 컨테이너 자신(127.0.0.1)으로만 좁혀서 나머지를 전부 '바깥'으로 취급하게 했다.
-local_net = 127.0.0.1/32
+local_net = 127.0.0.1/32       ; 컨테이너 안의 SIPp 같은 클라이언트에게는 원래 주소를 그대로
+local_net = @CONTAINER_IP@/32  ; 컨테이너 자신 (조건 2)
 external_media_address = @EXTERNAL_IP@
 external_signaling_address = @EXTERNAL_IP@

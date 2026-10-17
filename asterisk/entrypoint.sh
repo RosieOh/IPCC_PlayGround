@@ -15,8 +15,16 @@ EXTERNAL_IP="${EXTERNAL_IP:-127.0.0.1}"
 TEMPLATE=/etc/asterisk/pjsip_transport.conf.tmpl
 TARGET=/etc/asterisk-generated/pjsip_transport.conf
 
-sed "s/@EXTERNAL_IP@/${EXTERNAL_IP}/g" "$TEMPLATE" > "$TARGET"
-echo "[entrypoint] EXTERNAL_IP=${EXTERNAL_IP} -> ${TARGET}"
+# 컨테이너 자신의 IPv4. local_net에 들어가야 Asterisk가 SDP의 자기 주소를 EXTERNAL_IP로 바꿔 적는다.
+# 컨테이너를 다시 만들면 바뀔 수 있어서 시작할 때마다 다시 찾는다.
+CONTAINER_IP="$(hostname -i | tr ' ' '\n' | grep -E '^[0-9]+(\.[0-9]+){3}$' | head -n1 || true)"
+if [ -z "$CONTAINER_IP" ]; then
+    echo "[entrypoint] WARNING: 컨테이너 IP를 찾지 못함 — Mac에서 건 콜의 음성이 안 들릴 수 있다" >&2
+    CONTAINER_IP=127.0.0.1
+fi
+
+sed -e "s/@EXTERNAL_IP@/${EXTERNAL_IP}/g" -e "s/@CONTAINER_IP@/${CONTAINER_IP}/g" "$TEMPLATE" > "$TARGET"
+echo "[entrypoint] EXTERNAL_IP=${EXTERNAL_IP} CONTAINER_IP=${CONTAINER_IP} -> ${TARGET}"
 
 # 빈 디렉터리를 마운트하면 make install이 만들어 둔 하위 디렉터리가 가려진다
 mkdir -p /var/log/asterisk/cdr-csv /var/log/asterisk/cdr-custom /var/spool/asterisk/monitor
