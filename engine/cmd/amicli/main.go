@@ -32,6 +32,10 @@ const usage = `amicli — AMI 학습용 CLI
   amicli replay [-json] [-all] [-only E1,E2] [-v] <녹화파일>
       watch가 녹화한 원본 스트림을 다시 읽는다.
 
+  amicli stats [-fields] [-md] <녹화파일 ...>
+      녹화를 집계한다: 이벤트 종류별 개수, 콜(Linkedid)별 이벤트 수, 이벤트마다 본 필드(-fields).
+      -md는 이벤트 사전(docs/10-event-dictionary.md) 형식으로 낸다.
+
   amicli agent <login|logout|pause|unpause> [-sim] [-queue Q] [-reason R] [내선 ...]
       상담원 큐 로그인/로그아웃/이석/대기 (내선 생략 시 1001 1002 1003).
       -sim이면 가짜 상담원(Local/<내선>@sim-agent)을 다룬다.
@@ -39,7 +43,8 @@ const usage = `amicli — AMI 학습용 CLI
   amicli sim-call [-n N] [-gap 2s] [-patience 300] [-talk 0]
       가짜 고객 콜을 대표번호로 인입시킨다. -patience를 짧게 주면 대기 중 포기(abandon)가 된다.
 
-공통 옵션: -addr (AMI_ADDR, 기본 127.0.0.1:5038) -user (AMI_USER) -secret (AMI_SECRET) -debug
+공통 옵션: -addr (AMI_ADDR, 기본 127.0.0.1:5038) -user (AMI_USER) -secret (AMI_SECRET)
+          -md5 (챌린지 방식 로그인, 비밀번호를 보내지 않는다) -debug
 `
 
 func main() {
@@ -58,6 +63,8 @@ func main() {
 		err = runAction(ctx, args)
 	case "replay":
 		err = runReplay(args)
+	case "stats":
+		err = runStats(args)
 	case "agent":
 		err = runAgent(ctx, args)
 	case "sim-call":
@@ -77,7 +84,7 @@ func main() {
 // connFlags는 모든 명령이 쓰는 접속 옵션이다.
 type connFlags struct {
 	addr, user, secret string
-	debug              bool
+	md5, debug         bool
 }
 
 func addConnFlags(fs *flag.FlagSet) *connFlags {
@@ -85,6 +92,7 @@ func addConnFlags(fs *flag.FlagSet) *connFlags {
 	fs.StringVar(&o.addr, "addr", envOr("AMI_ADDR", "127.0.0.1:5038"), "AMI 주소")
 	fs.StringVar(&o.user, "user", envOr("AMI_USER", "ipcc"), "AMI 사용자 (asterisk/conf/manager.conf)")
 	fs.StringVar(&o.secret, "secret", envOr("AMI_SECRET", "ipcc-secret"), "AMI 비밀번호")
+	fs.BoolVar(&o.md5, "md5", false, "MD5 챌린지 방식으로 로그인 (비밀번호를 그대로 보내지 않는다)")
 	fs.BoolVar(&o.debug, "debug", false, "디버그 로그 (보내는 액션까지 표시)")
 	return o
 }
@@ -102,6 +110,7 @@ func (o *connFlags) config(events string, quiet bool) ami.Config {
 		Addr:     o.addr,
 		Username: o.user,
 		Secret:   o.secret,
+		AuthMD5:  o.md5,
 		Events:   events,
 		Logger:   slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})),
 	}

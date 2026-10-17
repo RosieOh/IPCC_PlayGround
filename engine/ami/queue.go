@@ -11,8 +11,14 @@ import "sync/atomic"
 // 메모리를 조금 더 쓰더라도 읽기 루프를 막지 않는 쪽을 택했다. 대신 depth로 적체를 감시한다.
 //
 // done이 닫히면 남은 값을 버리고 끝낸다. in이 닫히면 남은 값을 마저 넘기고 out을 닫는다.
-func pump[T any](in <-chan T, out chan<- T, depth *atomic.Int64, done <-chan struct{}) {
+// onDepth가 있으면 깊이가 바뀔 때마다 새 깊이로 부른다 (적체 경고용, pump 고루틴에서만 불린다).
+func pump[T any](in <-chan T, out chan<- T, depth *atomic.Int64, done <-chan struct{}, onDepth func(int64)) {
 	defer close(out)
+	changed := func(d int64) {
+		if onDepth != nil {
+			onDepth(d)
+		}
+	}
 	var q []T
 	for {
 		// 보낼 게 없으면 send를 nil로 두어 select에서 그 case가 선택되지 않게 한다.
@@ -29,7 +35,7 @@ func pump[T any](in <-chan T, out chan<- T, depth *atomic.Int64, done <-chan str
 				for _, v := range q {
 					select {
 					case out <- v:
-						depth.Add(-1)
+						changed(depth.Add(-1))
 					case <-done:
 						return
 					}
@@ -37,7 +43,7 @@ func pump[T any](in <-chan T, out chan<- T, depth *atomic.Int64, done <-chan str
 				return
 			}
 			q = append(q, v)
-			depth.Add(1)
+			changed(depth.Add(1))
 		case send <- next:
 			var zero T
 			q[0] = zero // 넘긴 값을 GC가 수거할 수 있게
@@ -45,7 +51,7 @@ func pump[T any](in <-chan T, out chan<- T, depth *atomic.Int64, done <-chan str
 			if len(q) == 0 {
 				q = nil
 			}
-			depth.Add(-1)
+			changed(depth.Add(-1))
 		case <-done:
 			return
 		}

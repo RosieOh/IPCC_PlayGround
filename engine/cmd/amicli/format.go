@@ -109,6 +109,14 @@ func printMessage(w io.Writer, m ami.Message) {
 	fmt.Fprintln(w)
 }
 
+// printCommandOutput은 Command 액션 응답의 Output 줄만 CLI에서 친 것처럼 보여 준다.
+// Asterisk 14부터는 CLI 출력 한 줄이 Output 필드 하나로 온다.
+func printCommandOutput(w io.Writer, m ami.Message) {
+	for _, line := range m.GetAll("Output") {
+		fmt.Fprintln(w, line)
+	}
+}
+
 func writeJSONLine(w io.Writer, m ami.Message) {
 	// json.Marshal로 감싸면 <, >가 다시 <로 바뀌므로 MarshalJSON을 직접 부른다
 	b, err := m.MarshalJSON()
