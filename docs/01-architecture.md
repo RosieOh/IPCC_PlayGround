@@ -118,15 +118,19 @@ Asterisk는 **B2BUA**(양쪽 통화를 각각 끝단으로 처리하는 중계�
 IPCC_Playground/
 ├── Makefile                 자주 쓰는 명령 (make로 목록 보기)
 ├── docker-compose.yml       Asterisk (Stage 3~4에 redis, mysql 추가 예정)
+├── .github/workflows/       CI: make test + lint, make e2e
 ├── asterisk/
 │   ├── Dockerfile           Asterisk 22.11 소스 빌드 + sngrep/tcpdump/sipp
-│   ├── entrypoint.sh        NAT 설정 생성, 시간대 설정, 실행
+│   ├── entrypoint.sh        NAT 설정 생성(EXTERNAL_IP, 컨테이너 IP), 시간대 설정, 실행
 │   └── conf/                설정 파일 (컨테이너의 /etc/asterisk에 읽기 전용으로 마운트)
 ├── engine/                  Go CTI 엔진 (모듈 ipcc/engine)
 │   ├── ami/                 AMI 프로토콜·클라이언트 (Stage 1)
+│   ├── rtpcheck/            최소 SIP UA: 에코로 RTP 왕복을 세는 음성 경로 검사
 │   ├── cmd/amicli/          학습용 CLI: watch, action, replay, agent, sim-call
+│   ├── cmd/rtpcheck/        make rtp-check
+│   ├── e2e/                 실제 Asterisk로 콜 흐름 전체 검증 (make e2e)
 │   └── testdata/            replay 테스트용 AMI 녹화 (번호를 가린 것만)
-├── tests/sipp/              SIPp 시나리오 (등록, 통화)
+├── tests/sipp/              SIPp 시나리오 (등록, 고객 발신, 상담원 응답)
 ├── docs/                    이 문서들
 ├── data/                    (git 제외) Asterisk 로그·CDR·queue_log·녹음
 └── recordings/              (git 제외) amicli watch가 녹화한 AMI 원본

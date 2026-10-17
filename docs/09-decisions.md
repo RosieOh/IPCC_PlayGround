@@ -20,7 +20,10 @@
 - **결정**: `pjsip.conf`(chan_pjsip)만 쓰고 템플릿(`(!)`)으로 내선 설정을 묶는다.
 - **결과**: 블로그 예제를 옮길 때 옵션 이름을 PJSIP 식으로 바꿔야 한다.
 
-### D-003 Mac Docker Desktop의 NAT는 `local_net` + `EXTERNAL_IP` 템플릿으로 푼다 — 채택
+### D-003 Mac Docker Desktop의 NAT는 `local_net` + `EXTERNAL_IP` 템플릿으로 푼다 — 대체됨 → D-014
+
+> `local_net = 127.0.0.1/32`만 둔 부분이 틀렸다. 컨테이너 자신의 주소가 local_net 밖이면 Asterisk는 SDP 주소를
+> 바꿔 적지 않는다. 아래는 당시 기록이다.
 
 - **맥락**: Mac은 컨테이너 IP로 직접 갈 수 없다. 포트포워딩을 거친 패킷은 컨테이너 안에서 출발지가 172.23.0.1로 보인다.
 - **결정**: `local_net = 127.0.0.1/32`로 컨테이너 밖을 모두 '바깥'으로 보고, `external_*_address`에 `EXTERNAL_IP`를 넣는다.
@@ -97,3 +100,28 @@
   golangci-lint 버전은 Makefile과 워크플로에서 같게 고정한다. 변경은 브랜치 → PR → CI 통과 → 병합 순서로 들어간다.
 - **결과**: 첫 실행은 이미지를 빌드하느라 오래 걸리고, 이후에는 캐시를 쓴다.
   Asterisk 버전을 바꿀 때는 Dockerfile·docker-compose.yml·워크플로의 `ASTERISK_VERSION`을 같이 바꾼다.
+
+### D-014 `local_net`에는 컨테이너 자신과 127.0.0.1만 넣고, 컨테이너 IP는 시작할 때 찾는다 — 채택 (D-003 대체)
+
+- **맥락**: Mac에서 실제로 걸어 본 `make rtp-check`가 SDP에 `c=172.23.0.2`(컨테이너 IP)가 적히는 것을 보여 줬다.
+  Mac은 그 주소로 갈 수 없어서 소프트폰은 "연결은 되는데 소리가 안 들림"이 됐을 것이다.
+  컨테이너 안에서 도는 SIPp 테스트는 이 길을 지나지 않아서 통과했다.
+  Asterisk 소스를 확인하니, 받는 쪽이 local_net **밖**이고 **자기 SDP 주소가 local_net 안**일 때만 external 주소로 바꿔 적는다.
+- **결정**: `local_net = 127.0.0.1/32`와 `local_net = <컨테이너 IP>/32`. 컨테이너 IP는 `entrypoint.sh`가 `hostname -i`로 찾아
+  템플릿에 넣는다. Mac의 패킷이 보이는 Docker 게이트웨이(172.x.0.1)는 일부러 local_net 밖에 둔다.
+- **대안**: compose 네트워크 대역과 컨테이너 IP를 고정하기 (다른 Docker 네트워크·VPN과 겹칠 위험), 대역 전체를 local_net에
+  넣기 (게이트웨이까지 들어가서 조건이 깨진다).
+- **결과**: Mac에서 RTP 100개 중 96개가 돌아온다(나머지는 strictrtp 학습 중 버림). 같은 Compose 네트워크의 다른 컨테이너가
+  SIP 단말이 되면 그쪽에도 EXTERNAL_IP가 적히므로, 그런 구성을 만들 때 다시 본다.
+  e2e의 RTP 단계와 CI가 이 회귀를 계속 지킨다.
+
+### D-015 사람 없이 쓰는 테스트 장치: 9002(고정 주소 상담원 전화기), 602(순수 에코), rtpcheck — 채택
+
+- **맥락**: 소프트폰으로만 확인할 수 있던 두 가지가 남아 있었다. 실제 SIP 상담원 흐름, 그리고 Mac에서 오가는 음성 경로다.
+- **결정**:
+  - 9002는 등록 없이 `contact = sip:9002@127.0.0.1:5072`로 부른다. 그 포트에서 SIPp(`uas-agent.xml`)가 받고 먼저 끊는다.
+    소프트폰 계정(1001~1003)을 건드리지 않고, OPTIONS에 답하지 못하는 SIPp를 위해 `qualify_frequency = 0`.
+  - 602는 안내멘트 없이 바로 Echo()라서 RTP 왕복을 바로 셀 수 있다.
+  - Mac에 SIPp를 설치하는 대신 Go로 최소 SIP UA(`engine/rtpcheck`)를 만들었다. 의존성 없이 Mac과 CI 러너에서 똑같이 돌고,
+    SIP·SDP·RTP를 코드로 읽을 수 있는 학습 자료도 된다.
+- **결과**: `make sip-agent-call`, `make rtp-check`, 그리고 e2e의 두 단계. 소프트폰으로 실제 소리를 듣는 확인은 여전히 사람 몫이다.

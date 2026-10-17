@@ -30,19 +30,23 @@ Stage 2부터는 설계 문서만 있고 구현은 직접 한다.
 
 **제공된 것** ✅
 - Asterisk 22.11 LTS 소스 빌드 이미지 (`make up`), 시작 로그에 WARNING/ERROR 없음
-- 내선 1001~1003(소프트폰용), 9001(SIPp 자동 테스트용)
-- 다이얼플랜: 600 에코, 601 안내멘트, 1001~1009 내선 통화, 5000 대표번호 → `support` 큐
-- Mac Docker Desktop용 NAT 설정 (`EXTERNAL_IP`), RTP 포트 10000-10099
-- SIPp 시나리오: `make sip-register`, `make sip-echo`, `make sip-queue` — 모두 통과 확인
+- 내선 1001~1003(소프트폰용), 9001(SIPp 고객), 9002(SIPp 상담원 전화기, 고정 주소)
+- 다이얼플랜: 600 에코, 601 안내멘트, 602 순수 에코(자동 검사용), 1001~1009 내선 통화, 5000 대표번호 → `support` 큐
+- Mac Docker Desktop용 NAT 설정 (`EXTERNAL_IP`, 컨테이너 IP를 넣은 `local_net`), RTP 포트 10000-10099
+- SIPp 시나리오: `make sip-register`, `make sip-echo`, `make sip-queue`, `make sip-agent-call`(실제 SIP 상담원 흐름) — 모두 통과 확인
+- `make rtp-check`: Mac에서 Docker 포트포워딩을 거쳐 음성(RTP)이 왕복하는지 자동 검사 (보냄 100 / 받음 96 확인)
+  - 이 검사가 첫 NAT 설정의 결함(SDP에 컨테이너 IP가 적힘)을 잡았고 고쳤다 (04 문서 6절, D-014)
 - 컨테이너 안의 sngrep, tcpdump, Asterisk 소스(`/usr/src/asterisk`)
 
 **직접 해볼 것**
+- [ ] `make rtp-check`로 서버 쪽 음성 경로가 정상인지 먼저 본다
 - [ ] Linphone(Mac)으로 1001 등록 → 600에 걸어 내 목소리가 돌아오는지 듣기 ([08-runbook.md](08-runbook.md#3-소프트폰-연결))
 - [ ] 두 번째 소프트폰으로 1002 등록 → 1001과 1002 사이 통화 (휴대폰을 쓰려면 `make up-lan`)
 - [ ] `make sngrep`을 켜 둔 채 등록·통화 → 래더에서 REGISTER/401/200, INVITE~BYE를 하나씩 설명하기
 - [ ] 200 OK의 SDP에서 c=, m= 줄을 읽고 어떤 주소·포트·코덱으로 정해졌는지 말하기
-- [ ] **일부러 고장 내기**: `asterisk/conf/pjsip_transport.conf.tmpl`의 `external_media_address`를 지우고
-  `make restart` → 통화해서 "연결은 되는데 소리가 안 들림"을 재현 → sngrep으로 원인을 찾고 되돌리기
+- [ ] **일부러 고장 내기**: `asterisk/conf/pjsip_transport.conf.tmpl`에서 `local_net = @CONTAINER_IP@/32` 줄을 지우고
+  `make restart` → `make rtp-check` 실패와 Linphone의 "연결은 되는데 소리가 안 들림"을 재현 → sngrep으로 원인을 찾고 되돌리기
+- [ ] `engine/rtpcheck`를 sngrep 트레이스와 나란히 읽기 — SIP를 직접 말하는 최소 구현 (Digest 인증, SDP, RTP 헤더)
 - [ ] `make pcap`으로 캡처 → Wireshark의 Telephony › VoIP Calls에서 통화를 찾아 RTP 재생
 - [ ] `make sh` → `/usr/src/asterisk/apps/app_queue.c`에서 `AgentConnect` 이벤트를 만드는 곳 찾아보기
 
@@ -64,7 +68,7 @@ Stage 2부터는 설계 문서만 있고 구현은 직접 한다.
 - 샘플 녹화 `engine/testdata/sim-normal-and-abandon.log` (정상 콜 1건 + 포기 콜 1건)
 - 실제 Asterisk로 확인한 것: 재시작 후 자동 재접속, `docker compose pause` 때 약 20초 안에 끊김 감지 후 복구,
   실측 중 발견한 버그 1건 수정 (OriginateResponse가 응답으로 잘못 분류되던 문제 — 05 문서 6절)
-- `make e2e` (`engine/e2e`): 실제 Asterisk로 로그인 → 정상 콜 2건 → 포기 → SIPp 등록·통화 → 로그아웃
+- `make e2e` (`engine/e2e`): 실제 Asterisk로 로그인 → 정상 콜 2건 → 포기 → SIPp 등록·통화 → 로그아웃 → 실제 SIP 상담원 콜 → 음성(RTP) 왕복
   (`E2E_RESTART=1`이면 재시작 후 재접속까지)을 이벤트로 검증한다. 약 30초
 - `make lint`: golangci-lint (errcheck, exhaustive, errorlint)
 - CI (`.github/workflows/ci.yml`): PR과 `main` 푸시마다 `make test`, golangci-lint, `make e2e`
@@ -93,6 +97,7 @@ Stage 2부터는 설계 문서만 있고 구현은 직접 한다.
 → 설계 초안 [06-state-model.md](06-state-model.md), 포팅 방법 [07-rust-to-go.md](07-rust-to-go.md)
 
 **직접 해볼 것**
+- [ ] 제공된 녹화 두 개로 시작: `sim-normal-and-abandon.log`(가짜 상담원), `sip-agent-call.log`(실제 SIP 상담원)
 - [ ] 시나리오별 녹화 만들기 (소프트폰 또는 sim): 정상, 포기, 무응답 재분배, 보류, 블라인드 전환,
   어텐디드 전환, 3자통화, 상담원이 먼저 끊음 / 고객이 먼저 끊음
 - [ ] 녹화를 보고 06 문서의 이벤트 → 상태 전이표를 검증하고 고치기 (확인한 사실만 반영)

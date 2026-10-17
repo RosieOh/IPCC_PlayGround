@@ -48,6 +48,7 @@ Queue     name, waiting[](callID, position, joinedAt), members[]
 ```
 
 - **콜 ID = Linkedid.** ✓ 샘플 녹화에서 고객 Local 채널 쌍과 큐가 만든 상담원 채널 쌍이 모두 같은 Linkedid였다.
+  실제 SIP 고객·SIP 상담원 콜에서도 AgentConnect의 `Linkedid`와 `DestLinkedid`가 같았다 ✓ (e2e로 매번 확인).
   전환·Originate에서도 유지되는지는 **?** (녹화로 확인할 것)
 - 고객 번호는 `Newchannel`이 아니라 `NewCallerid` 뒤에 확정된다 ✓ (05 문서 6절).
 
@@ -135,6 +136,7 @@ Entered(ARS·멘트) → Queued(대기) → Alerting(상담원 벨) → Connecte
 | BridgeEnter / BridgeLeave | 브리지 구성 갱신 (3명 이상이면 회의) | ✓ (2자) |
 | Hangup | 채널 종료. 콜의 마지막 채널이면 콜 종료 | ✓ |
 | QueueMemberAdded / Removed / Pause | 엔진이 기대한 Asterisk 상태와 비교 (불일치면 경고·보정) | ✓ |
+| QueueMemberStatus | 단말 장애 감지에만 쓴다. 벨이 울리는 중에도 `BUSY(3)`라서 상담원 상태 판단에 쓰지 않는다 | ✓ (05 문서 6절 14번) |
 | DeviceStateChange | 무시 (나중에 단말 장애 감지에 쓸 수 있음) | ✓ |
 
 **처리 순서에 기대지 않는다.** AgentComplete는 상담원·고객 채널의 Hangup보다 늦게 올 수 있고 ✓ (05 문서 5절),

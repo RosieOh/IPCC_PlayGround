@@ -24,6 +24,7 @@ make watch         # AMI 이벤트 실시간 보기 (recordings/에 녹화)
 make sim-agents    # 가짜 상담원 3명 로그인 (SIM-1001~1003)
 make sim-call n=3  # 가짜 고객 콜 3건 → 터미널 1에서 흐름 확인
 make sip-echo      # SIP 인증·통화 자동 테스트 (Successful call 1)
+make rtp-check     # 음성(RTP) 경로 검사 (✓ 양방향 음성 경로 정상)
 ```
 
 `make`만 치면 전체 명령 목록이 나온다.
@@ -34,7 +35,7 @@ make sip-echo      # SIP 인증·통화 자동 테스트 (Successful call 1)
 |---|---|---|
 | `make test` | 몇 초 | gofmt, go vet, 단위 테스트(`-race`) |
 | `make lint` | 몇십 초 (첫 실행은 이미지 내려받기) | errcheck, exhaustive, errorlint 등 (golangci-lint를 Docker로) |
-| `make e2e` | 약 30초 | 실제 Asterisk로 로그인 → 정상·포기·SIP 콜 → 로그아웃. `E2E_RESTART=1 make e2e`면 재시작 후 재접속까지 |
+| `make e2e` | 약 40초 | 실제 Asterisk로 로그인 → 정상·포기·SIP 콜 → 로그아웃 → 실제 SIP 상담원 콜 → 음성(RTP) 왕복. `E2E_RESTART=1 make e2e`면 재시작 후 재접속까지 |
 
 `make e2e`는 실제 상담원(소프트폰)이 큐에 로그인돼 있거나 통화 중인 채널이 있으면 시작하지 않는다.
 e2e 콜이 사람의 전화기로 가지 않게 하기 위해서다.
@@ -48,10 +49,12 @@ e2e 콜이 사람의 전화기로 가지 않게 하기 위해서다.
 | 1001 | ipcc1001 | 상담원 |
 | 1002 | ipcc1002 | 상담원 / 고객 역할 |
 | 1003 | ipcc1003 | 상담원 |
-| 9001 | sipp9001 | SIPp 자동 테스트 전용 (소프트폰에 쓰지 않는다) |
+| 9001 | sipp9001 | 자동 테스트의 고객 역할 (SIPp, rtpcheck). 소프트폰에 쓰지 않는다 |
+| 9002 | sipp9002 | 자동 테스트의 상담원 전화기 (SIPp). 등록 없이 컨테이너 안 127.0.0.1:5072로 부른다 |
 
 **Mac의 Linphone** (`make up`으로 띄운 경우)
 
+0. 먼저 `make rtp-check`가 통과하는지 본다. 통과하면 서버 쪽 음성 경로는 정상이다.
 1. "SIP 계정 사용"(Use a SIP account)을 고른다 (Linphone 자체 계정이 아니라).
 2. 사용자 이름 `1001`, SIP 도메인 `127.0.0.1`, 비밀번호 `ipcc1001`, 전송 `UDP`.
 3. 등록되면 `make rx c="pjsip show contacts"`에 1001이 보인다.
@@ -120,7 +123,9 @@ make agent-logout ext=1001
 | 등록 시 401이 반복되거나 403 | 사용자 이름·비밀번호 | `make rx c="pjsip set logger on"` 후 `make logs`, `security.log` |
 | 걸면 404 | 다이얼플랜에 그 번호가 없다 | `make rx c="dialplan show internal"` |
 | 걸면 바로 끊김 | 상대가 등록되지 않음 | `make rx c="pjsip show contacts"` |
-| 연결은 되는데 소리가 없음 | NAT·SDP 주소, RTP 포트 | [04 문서 6절](04-sip-sdp-rtp.md#6-nat와-연결은-되는데-소리가-안-들려요)의 진단 순서 |
+| 연결은 되는데 소리가 없음 | NAT·SDP 주소, RTP 포트 | `make rtp-check`부터. 그다음 [04 문서 6절](04-sip-sdp-rtp.md#6-nat와-연결은-되는데-소리가-안-들려요)의 진단 순서 |
+| `make rtp-check`의 SDP 주소가 172.x | `local_net`에 컨테이너 IP가 없다 | `make logs`의 `[entrypoint] … CONTAINER_IP=` 줄 확인, `make restart` |
+| `make sip-agent-call`이 가짜 상담원에게 감 | 가짜 상담원이 로그인돼 있다 | `make sim-logout` 후 다시 |
 | 대표번호(5000)에 걸었는데 상담원 벨이 안 울림 | 멤버 없음, 모두 이석, 모두 통화 중 | `make rx c="queue show support"` |
 | amicli: "5초 안에 로그인하지 못함" | Asterisk가 안 떠 있음, 계정 불일치 | `make ps`, `manager.conf`의 `[ipcc]`, `.env`의 `AMI_*` |
 | amicli: `banner: EOF`가 몇 번 찍힘 | Asterisk 재시작 중 (Docker 포트포워더가 접속만 받고 끊음) | 정상. 자동 재접속을 기다린다 |
