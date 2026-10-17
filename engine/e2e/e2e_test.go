@@ -21,14 +21,26 @@ import (
 	"time"
 
 	"ipcc/engine/ami"
+	"ipcc/engine/rtpcheck"
 )
 
 const (
 	queueName = "support"
 	stepWait  = 45 * time.Second // 한 단계에서 기대한 이벤트를 기다리는 최대 시간
+
+	// 자동 테스트용 SIP 상담원 전화기. pjsip.conf에서 127.0.0.1:5072 고정 주소로 부른다.
+	sipAgentIface = "PJSIP/9002"
+	sipAgentName  = "SIPP-9002"
 )
 
 var simExts = []string{"1001", "1002", "1003"}
+
+// SIPp 역할별 옵션. 고객(9001)은 Makefile의 SIPP와 같고, 상담원(9002)은 고정 주소 5072에서 기다린다.
+var (
+	customerSIPp = []string{"127.0.0.1:5060", "-i", "127.0.0.1", "-p", "5070",
+		"-key", "user", "9001", "-au", "9001", "-ap", "sipp9001"}
+	agentSIPp = []string{"-i", "127.0.0.1", "-p", "5072", "-mp", "6100"}
+)
 
 type step struct {
 	name string
@@ -43,8 +55,8 @@ func TestCallFlow(t *testing.T) {
 
 	h := newHarness(t, root)
 	h.requireNoRealActivity(t)
-	h.removeSimAgents() // 지난 실행이나 make sim-agents가 남긴 가짜 상담원 정리
-	t.Cleanup(h.removeSimAgents)
+	h.removeTestAgents() // 지난 실행이나 make sim-agents가 남긴 테스트용 상담원 정리
+	t.Cleanup(h.removeTestAgents)
 
 	steps := []step{
 		{"상담원 3명 로그인", h.stepLogin},
@@ -52,6 +64,8 @@ func TestCallFlow(t *testing.T) {
 		{"대기 중 포기 — 모두 이석인 동안 고객이 끊음", h.stepAbandon},
 		{"SIP — 등록, 에코 통화, 대표번호로 큐 통화 (SIPp)", h.stepSIP},
 		{"상담원 3명 로그아웃", h.stepLogout},
+		{"실제 SIP 상담원 — SIP 고객 → 대표번호 → PJSIP/9002가 받고 먼저 끊음", h.stepSIPAgent},
+		{"음성(RTP) 경로 — 포트포워딩을 거쳐 602 에코로 RTP 왕복", h.stepRTP},
 	}
 	if os.Getenv("E2E_RESTART") == "1" {
 		steps = append(steps, step{"Asterisk 재시작 → 자동 재접속", h.stepRestart})
@@ -159,8 +173,73 @@ func (h *harness) stepSIP(t *testing.T) {
 
 func (h *harness) stepLogout(t *testing.T) {
 	mark := h.rec.mark()
-	h.removeSimAgents()
+	h.removeTestAgents()
 	h.rec.waitCount(t, mark, len(simExts), "QueueMemberRemoved", isSimMember)
+}
+
+// stepSIPAgent는 소프트폰 상담원과 같은 PJSIP 채널 흐름을 SIPp 두 개로 만든다.
+// 가짜 상담원(Local 채널)이 모두 로그아웃한 뒤라서 큐는 PJSIP/9002만 부른다.
+func (h *harness) stepSIPAgent(t *testing.T) {
+	uas := make(chan error, 1)
+	go func() {
+		out, err := h.sippRun(agentSIPp, "-sf", "/sipp/uas-agent.xml", "-d", "2000")
+		if err != nil {
+			err = fmt.Errorf("%w\n%s", err, lastLines(out, 20))
+		}
+		uas <- err
+	}()
+	time.Sleep(time.Second) // SIPp가 5072 포트를 열 시간
+
+	mark := h.rec.mark()
+	h.send(t, ami.NewAction("QueueAdd").
+		With("Queue", queueName).
+		With("Interface", sipAgentIface).
+		With("MemberName", sipAgentName).
+		With("Paused", "false"))
+	h.rec.waitCount(t, mark, 1, "QueueMemberAdded", field("MemberName", sipAgentName))
+
+	h.sipp(t, "-sf", "/sipp/uac-call-wait-bye.xml", "-s", "5000")
+	select {
+	case err := <-uas:
+		if err != nil {
+			t.Fatalf("상담원 SIPp(UAS) 실패: %v", err)
+		}
+	case <-time.After(30 * time.Second):
+		t.Fatal("상담원 SIPp(UAS)가 30초 안에 끝나지 않음")
+	}
+
+	conn := h.rec.waitCount(t, mark, 1, "AgentConnect", field("MemberName", sipAgentName))[0]
+	if !strings.HasPrefix(conn.Get("Channel"), "PJSIP/9001-") || !strings.HasPrefix(conn.Get("DestChannel"), "PJSIP/9002-") {
+		t.Errorf("AgentConnect Channel=%q DestChannel=%q, want PJSIP/9001-… / PJSIP/9002-…", conn.Get("Channel"), conn.Get("DestChannel"))
+	}
+	// 고객 구간과 상담원 구간이 같은 콜로 묶여야 한다
+	if conn.Get("Linkedid") == "" || conn.Get("Linkedid") != conn.Get("DestLinkedid") {
+		t.Errorf("Linkedid=%q DestLinkedid=%q, want 같은 값", conn.Get("Linkedid"), conn.Get("DestLinkedid"))
+	}
+	done := h.rec.waitCount(t, mark, 1, "AgentComplete", field("MemberName", sipAgentName))[0]
+	if done.Get("Reason") != "agent" {
+		t.Errorf("Reason=%q, want agent (상담원 SIPp가 먼저 BYE)", done.Get("Reason"))
+	}
+
+	mark = h.rec.mark()
+	h.send(t, ami.NewAction("QueueRemove").With("Queue", queueName).With("Interface", sipAgentIface))
+	h.rec.waitCount(t, mark, 1, "QueueMemberRemoved", field("MemberName", sipAgentName))
+}
+
+// stepRTP는 이 테스트를 돌리는 컴퓨터(Mac 또는 CI 러너)에서 Docker 포트포워딩을 거쳐
+// 602(에코)로 RTP를 보내 돌아오는지 본다. NAT 설정(local_net, EXTERNAL_IP)이 틀리면 여기서 실패한다.
+func (h *harness) stepRTP(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	res, err := rtpcheck.Run(ctx, rtpcheck.Config{Server: envOr("SIP_ADDR", "127.0.0.1:5060")})
+	t.Logf("SDP 음성 주소 %s (%s), RTP 보냄 %d / 받음 %d, 첫 에코 %s",
+		res.RemoteRTP, res.Codec, res.Sent, res.Received, res.FirstEcho.Round(time.Millisecond))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.OK() {
+		t.Fatalf("보낸 음성이 돌아오지 않음 — SDP 음성 주소 %s가 이 컴퓨터에서 갈 수 있는 주소인지 확인 (docs/04-sip-sdp-rtp.md 6절)", res.RemoteRTP)
+	}
 }
 
 func (h *harness) stepRestart(t *testing.T) {
@@ -253,11 +332,16 @@ func (h *harness) requireNoRealActivity(t *testing.T) {
 	// 스냅샷의 QueueMember는 실시간 이벤트와 필드 이름이 다르다: Name/Location (이벤트는 MemberName/Interface)
 	_, items := h.sendList(t, ami.NewAction("QueueStatus").With("Queue", queueName))
 	for _, m := range items {
-		if m.Event() == "QueueMember" && !strings.HasPrefix(m.Get("Name"), "SIM-") {
+		if m.Event() == "QueueMember" && !isTestInterface(m.Get("Location")) {
 			t.Fatalf("실제 상담원 %s(%s)이 %s 큐에 로그인돼 있어 e2e 콜이 그 전화기로 갈 수 있음 — make agent-logout 후 다시 실행",
 				m.Get("Name"), m.Get("Location"), queueName)
 		}
 	}
+}
+
+// isTestInterface는 테스트가 만들고 지우는 상담원(가짜 상담원, SIPp 상담원)인지 본다.
+func isTestInterface(iface string) bool {
+	return iface == sipAgentIface || (strings.HasPrefix(iface, "Local/") && strings.HasSuffix(iface, "@sim-agent"))
 }
 
 func (h *harness) send(t *testing.T, act ami.Message) ami.Message {
@@ -282,12 +366,16 @@ func (h *harness) sendList(t *testing.T, act ami.Message) (ami.Message, []ami.Me
 	return resp, items
 }
 
-// removeSimAgents는 가짜 상담원을 큐에서 뺀다. 없어서 실패하는 것은 무시한다.
-func (h *harness) removeSimAgents() {
+// removeTestAgents는 테스트용 상담원(가짜 상담원, SIPp 상담원)을 큐에서 뺀다. 없어서 실패하는 것은 무시한다.
+func (h *harness) removeTestAgents() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+	ifaces := []string{sipAgentIface}
 	for _, ext := range simExts {
-		_, _ = h.c.Send(ctx, ami.NewAction("QueueRemove").With("Queue", queueName).With("Interface", simIface(ext)))
+		ifaces = append(ifaces, simIface(ext))
+	}
+	for _, iface := range ifaces {
+		_, _ = h.c.Send(ctx, ami.NewAction("QueueRemove").With("Queue", queueName).With("Interface", iface))
 	}
 }
 
@@ -324,14 +412,19 @@ func (h *harness) number() string {
 	return fmt.Sprintf("%s%04d", h.prefix, h.seq)
 }
 
-// sipp는 Asterisk 컨테이너 안에서 SIPp 시나리오 하나를 돌린다 (Makefile의 SIPP와 같은 옵션).
+// sipp는 고객(9001) 역할로 SIPp 시나리오 하나를 돌린다. 실패하면 테스트를 멈춘다.
 func (h *harness) sipp(t *testing.T, args ...string) {
 	t.Helper()
-	base := []string{"exec", "-T", "asterisk", "sipp", "127.0.0.1:5060", "-i", "127.0.0.1", "-p", "5070",
-		"-key", "user", "9001", "-au", "9001", "-ap", "sipp9001", "-m", "1", "-nostdin", "-timeout", "60s"}
-	if out, err := compose(h.root, append(base, args...)...); err != nil {
+	if out, err := h.sippRun(customerSIPp, args...); err != nil {
 		t.Fatalf("SIPp %v 실패: %v\n%s", args, err, lastLines(out, 30))
 	}
+}
+
+// sippRun은 Asterisk 컨테이너 안에서 SIPp를 role 옵션으로 한 번 돌리고 출력을 돌려준다.
+func (h *harness) sippRun(role []string, args ...string) (string, error) {
+	cmd := append([]string{"exec", "-T", "asterisk", "sipp"}, role...)
+	cmd = append(cmd, "-m", "1", "-nostdin", "-timeout", "60s")
+	return compose(h.root, append(cmd, args...)...)
 }
 
 func (h *harness) logSummary(t *testing.T) {

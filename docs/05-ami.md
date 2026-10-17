@@ -100,6 +100,7 @@ Asterisk CLI에서 문서를 바로 볼 수 있다: `make rx c="manager show com
 샘플 녹화 `engine/testdata/sim-normal-and-abandon.log`의 첫 번째 콜이다(`make sim-agents` + `make sim-call`로 만든 것).
 고객 1명이 대표번호로 들어와 상담원 SIM-1001과 5초 통화하고, 상담원이 먼저 끊었다. 주요 이벤트만 추렸고,
 모든 이벤트의 `Linkedid`는 `1792123138.0`이다. 직접 보려면 `bin/amicli replay engine/testdata/sim-normal-and-abandon.log`.
+실제 SIP 고객과 SIP 상담원 사이의 콜은 `engine/testdata/sip-agent-call.log`에 있다 (`make sip-agent-call`로 만든 것, 6절 13번).
 
 | 시각 | 이벤트 | 채널 | 핵심 필드 | 엔진 입장의 의미 |
 |---|---|---|---|---|
@@ -159,7 +160,9 @@ RingTime: 2
 
 녹화를 보면서 확인한 사실과, 그 과정에서 찾은 버그다. Stage 2 상태머신을 설계할 때 그대로 반영해야 한다.
 
-1. **Newchannel 시점에는 발신번호가 없을 수 있다.** `<unknown>`으로 왔다가 `NewCallerid`로 채워진다.
+1. **Newchannel 시점에는 발신번호가 없을 수 있다.** Originate로 만든 Local 채널은 `<unknown>`으로 왔다가
+   `NewCallerid`로 채워진다. 실제 SIP 채널(`PJSIP/9001-…`)은 Newchannel부터 번호가 있었다 (`sip-agent-call.log`).
+   어느 쪽이든 번호는 NewCallerid까지 보고 확정한다.
    Newchannel의 CallerIDNum으로 고객을 판단하면 안 된다.
 2. **Local 채널은 `;1`/`;2` 쌍이다.** 큐에 들어간 것은 `customer;2`, '고객 전화기' 역할은 `customer;1`이다.
    실제 SIP 고객이면 `PJSIP/…` 채널 하나지만, 전환·ARS에서 Local 채널이 끼면 이 구조가 다시 나온다.
@@ -204,6 +207,12 @@ RingTime: 2
 12. **같은 정보도 이벤트와 스냅샷에서 필드 이름이 다르다.** 실시간 이벤트(`QueueMemberAdded`, `QueueMemberPause` …)는
     `MemberName`·`Interface`이고, `QueueStatus` 응답의 `QueueMember`는 `Name`·`Location`이다.
     재동기화 코드에서 이벤트 처리 함수를 그대로 재사용하면 빈 값을 읽는다.
+13. **실제 SIP 상담원과 가짜 상담원(Local)은 이벤트 모양이 다르다.** (`engine/testdata/sip-agent-call.log`)
+    SIP 고객 → 큐 → SIP 상담원(PJSIP/9002) 콜 1건은 채널 2개, 이벤트 56개였다. 가짜 상담원 콜은 Local 채널 쌍 때문에
+    채널 4개에 `LocalBridge`까지 붙어 이벤트가 두 배 넘게 나온다. 상태머신 테스트에는 두 종류의 녹화가 다 필요하다.
+14. **벨이 울리는 동안에도 상담원 장치 상태는 `BUSY(3)`다.** SIP 상담원의 `QueueMemberStatus`가 AgentCalled 직후
+    `Status=3(BUSY)`, 통화가 끝나자 `1(NOT_INUSE)`였다 (`device_state_busy_at = 1`이라 채널 하나만 있어도 BUSY).
+    상담원의 '벨울림'은 장치 상태가 아니라 AgentCalled로 판단한다.
 
 ## 7. 클라이언트 설계 (`engine/ami`)
 
@@ -258,7 +267,7 @@ Ping 없이는 영원히 모른다. 실측: `docker compose pause` 18초 뒤 감
 - **녹화 재생**: 녹화 파일 = 받은 바이트 그대로라서 같은 `Reader`로 다시 읽힌다. Stage 2의 golden test와
   Rust↔Go 차분 테스트가 이 성질 위에 선다.
 - 모든 테스트는 `-race`로 돌린다 (`make test`). 10회 반복 실행으로 타이밍 의존 테스트가 흔들리지 않는지 확인했다.
-- **e2e** (`make e2e`, `engine/e2e`): 실제 Asterisk에 붙어서 로그인 → 정상 콜 2건 → 포기 → SIPp 등록·통화 → 로그아웃을
+- **e2e** (`make e2e`, `engine/e2e`): 실제 Asterisk에 붙어서 로그인 → 정상 콜 2건 → 포기 → SIPp 등록·통화 → 로그아웃 → 실제 SIP 상담원 콜 → 음성(RTP) 왕복을
   이벤트로 검증한다. `E2E_RESTART=1`이면 Asterisk 재시작 후 재접속과 녹화 재생까지 본다.
   고정된 sleep 대신 "기대한 이벤트가 올 때까지 기다리기"로 짜서 느린 환경에서도 흔들리지 않는다.
   실패하면 그 사이에 받은 이벤트 종류와 개수를 보여 준다. 위 11번 사실도 이 테스트가 찾았다.

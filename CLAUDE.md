@@ -22,7 +22,8 @@
 | 실제 Asterisk로 전체 흐름 검증 | `make e2e` (재시작·재접속까지: `E2E_RESTART=1 make e2e`) |
 | CLI 빌드 | `make build` → `bin/amicli` |
 | 가짜 상담원 / 가짜 콜 | `make sim-agents`, `make sim-call n=3`, `make sim-abandon` |
-| SIP 자동 테스트 | `make sip-register`, `make sip-echo`, `make sip-queue` |
+| SIP 자동 테스트 | `make sip-register`, `make sip-echo`, `make sip-queue`, `make sip-agent-call` |
+| 음성(RTP) 경로 검사 | `make rtp-check` — Mac에서 602 에코로 RTP 왕복을 센다 |
 | 이벤트 녹화·재생 | `bin/amicli watch -record DIR`, `bin/amicli replay [-only E1,E2] [-v] FILE` |
 
 동작을 확인할 때는 사람에게 묻기 전에 직접 돌려 본다. 기본은 `make test && make lint && make e2e`(CI와 같다).
@@ -43,7 +44,18 @@
 - 테스트가 실패하면 테스트를 고쳐서 통과시키지 말고 원인을 보고한다.
 - Stage 2 이후 과제(사용자가 직접 할 학습 과제)를 대신 구현하지 않는다. 요청받았을 때만 한다.
 
+## 자동 테스트 장치 (사람의 소프트폰 계정 1001~1003은 건드리지 않는다)
+
+- 9001: 고객 역할 (SIPp, rtpcheck). 등록 없이 From으로 식별된다.
+- 9002: 상담원 전화기. 등록 없이 `contact = sip:9002@127.0.0.1:5072`로 부르고, 그 포트에서 SIPp(`uas-agent.xml`)가 받는다.
+- 602: 안내멘트 없는 순수 에코. 음성 경로 검사용.
+
 ## 도메인 핵심 (실측으로 확인한 것)
+
+- NAT: Asterisk는 받는 쪽이 `local_net` 밖이고 **자기 SDP 주소가 local_net 안**일 때만 EXTERNAL_IP로 바꿔 적는다.
+  그래서 local_net에는 컨테이너 자신과 127.0.0.1만 넣는다 (D-014). 이 설정을 바꾸면 `make rtp-check`로 확인한다.
+- 실제 SIP 채널은 Newchannel부터 발신번호가 있다 (Local 채널은 `<unknown>`으로 시작).
+- 벨이 울리는 중에도 상담원 장치 상태(QueueMemberStatus)는 `BUSY(3)`다. 벨울림은 AgentCalled로 판단한다.
 
 - 콜 ID는 `Linkedid`, 채널 ID는 `Uniqueid`다. 콜 하나에 채널이 여러 개다 (Asterisk는 B2BUA).
 - Local 채널은 `;1`/`;2` 쌍이다. 시뮬레이션 콜은 모두 Local 채널이다.

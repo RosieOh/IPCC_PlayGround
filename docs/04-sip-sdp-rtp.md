@@ -110,7 +110,7 @@ a=sendrecv                         ← 양방향 (보류 중이면 sendonly/inac
 - **offer/answer**: INVITE의 SDP가 제안(offer), 200 OK의 SDP가 답(answer)이다. answer에 남은 코덱이 실제로 쓰인다.
 - 포트 10052는 `rtp.conf`의 범위(10000-10099) 안에서 Asterisk가 고른 것이다.
 - 여기서 `c=`가 127.0.0.1인 이유: SIPp가 컨테이너 안(127.0.0.1)에서 걸었고, 127.0.0.1은 `local_net`이라서
-  원래 주소를 적었다. Mac의 소프트폰에서 걸면 `external_media_address` 값이 적힌다 (6절).
+  원래 주소를 적었다. Mac에서 걸면 `external_media_address` 값이 적힌다 (6절, `make rtp-check`로 확인).
 
 ## 5. RTP
 
@@ -139,17 +139,34 @@ Linphone(Mac) ──▶ 127.0.0.1:5060 ──▶ [Docker Desktop 포트포워딩
 ```
 
 - Mac은 컨테이너 IP(172.x)로 직접 갈 수 없다. Asterisk가 SDP에 `c=IN IP4 172.23.0.2`라고 적으면 음성이 안 간다.
-- 그래서 `pjsip_transport.conf.tmpl`에서 **`local_net = 127.0.0.1/32`** 로 좁혀 컨테이너 밖은 모두 '바깥'으로 보고,
-  바깥 상대에게는 `external_media_address`/`external_signaling_address`(= `EXTERNAL_IP`)를 적게 했다.
+  그래서 바깥 상대에게는 `external_media_address`/`external_signaling_address`(= `EXTERNAL_IP`)를 대신 적게 한다.
+- Asterisk가 주소를 바꿔 적는 조건은 **두 가지**다 (컨테이너 안의 `res_pjsip_nat.c`, `res_pjsip_sdp_rtp.c`에서 확인).
+  1. 받는 쪽이 `local_net` **밖**이어야 한다. Mac에서 온 패킷은 Docker 게이트웨이(172.23.0.1)에서 온 것으로 보인다.
+  2. 자기 SDP 주소(컨테이너 IP)는 `local_net` **안**이어야 한다. 소스 주석 그대로 "내 주소가 사설일 때만 바꾼다".
+- 그래서 `local_net`에는 **컨테이너 자신(`/32`)과 127.0.0.1만** 넣는다. 컨테이너 IP는 `entrypoint.sh`가 시작할 때마다 찾아 넣는다.
+  게이트웨이를 포함하는 대역(172.16.0.0/12 등)을 넣으면 조건 1이 깨지고, 127.0.0.1만 넣으면 조건 2가 깨진다.
+- 처음 설정은 127.0.0.1만 넣어서 조건 2가 깨져 있었다. 컨테이너 안에서 도는 SIPp 테스트는 통과해서 몰랐고,
+  Mac에서 실제로 걸어 보는 `make rtp-check`가 SDP의 `c=172.23.0.2`를 보여 주며 잡았다 (D-014).
 - `EXTERNAL_IP`는 `make up`이면 127.0.0.1, `make up-lan`이면 Mac의 LAN IP다. 생성된 실제 설정은
   `make rx c="pjsip show transport transport-udp"`로 확인한다.
 - RTP 포트 범위는 `rtp.conf`와 `docker-compose.yml`의 포트 공개 범위가 **반드시 같아야 한다.**
+
+`make rtp-check`의 정상 출력 (Mac에서 실행):
+
+```text
+SIP  우리 127.0.0.1:56017 → 서버 127.0.0.1:5060 (9001 → 602)
+SDP  Asterisk가 알려 준 음성 주소 127.0.0.1:10008 (PCMU/8000), 우리 음성 주소 127.0.0.1:60406
+RTP  보냄 100 / 받음 96, 첫 에코까지 81ms
+✓ 양방향 음성 경로 정상
+```
+
+처음 몇 개가 돌아오지 않는 것은 정상이다. `strictrtp`가 상대 주소를 배우는 동안(probation) 버린다.
 
 PJSIP의 NAT 관련 옵션:
 
 | 옵션 | 위치 | 역할 |
 |---|---|---|
-| `local_net` | transport | 이 대역의 상대에게는 원래 주소를, 나머지에게는 external 주소를 알려 준다 |
+| `local_net` | transport | 받는 쪽이 이 대역 밖이고 자기 주소가 이 대역 안일 때만 external 주소로 바꿔 적는다 |
 | `external_media_address` | transport | SDP `c=`에 적을 주소 |
 | `external_signaling_address` | transport | Contact/Via에 적을 주소 |
 | `rtp_symmetric` | endpoint | 실제로 RTP가 온 주소로 RTP를 보낸다 (comedia) |
@@ -159,6 +176,7 @@ PJSIP의 NAT 관련 옵션:
 
 ### 진단 순서
 
+0. **`make rtp-check`로 서버 쪽부터 확인한다.** 통과하면 Asterisk·Docker·NAT 설정은 정상이고, 소프트폰 설정을 보면 된다.
 1. **방향을 확인한다.** "내 목소리가 안 간다"인지 "상대 목소리가 안 온다"인지. 방향이 곧 틀린 주소의 위치다.
 2. **`make sngrep`으로 INVITE와 200 OK의 SDP를 본다.** `c=` 주소가 상대 입장에서 갈 수 있는 주소인가?
    (사설 IP·컨테이너 IP가 적혀 있으면 거의 확정)
@@ -168,7 +186,8 @@ PJSIP의 NAT 관련 옵션:
 5. **코덱을 본다.** 488이 오거나 answer에 코덱이 하나도 안 남았으면 `allow` 설정 문제다.
 6. **방화벽·VPN**: Mac의 방화벽, 회사 VPN이 UDP를 막지 않는지.
 
-> 실습: Stage 0 과제처럼 `external_media_address`를 일부러 지우고 `make restart` → 통화 → 위 순서로 원인 찾기.
+> 실습: `pjsip_transport.conf.tmpl`에서 `local_net = @CONTAINER_IP@/32` 줄을 지우고 `make restart` →
+> `make rtp-check`가 실패하고 SDP 주소가 컨테이너 IP로 바뀌는 것을 본다 → 소프트폰으로도 재현 → 되돌린다.
 
 ## 7. 실습 도구
 
@@ -178,4 +197,8 @@ PJSIP의 NAT 관련 옵션:
 | PJSIP 로거 | `make rx c="pjsip set logger on"` → `make logs` | SIP 메시지 원문을 Asterisk 로그로 |
 | RTP 디버그 | `make rx c="rtp set debug on"` | RTP 송수신 확인 (양이 많으니 짧게 켠다) |
 | tcpdump | `make pcap` → `data/asterisk/log/capture.pcap` | Wireshark: Telephony › VoIP Calls › Play Streams |
-| SIPp | `make sip-register`, `make sip-echo`, `make sip-queue` | 자동 테스트. 시나리오는 `tests/sipp/` |
+| SIPp | `make sip-register`, `make sip-echo`, `make sip-queue`, `make sip-agent-call` | 자동 테스트. 시나리오는 `tests/sipp/` |
+| rtpcheck | `make rtp-check` | Mac에서 602(에코)로 걸어 RTP 왕복을 센다. 음성 경로 자동 검사 |
+
+`engine/rtpcheck`는 **SIP를 직접 말해 보는 최소 구현**이기도 하다. 3절의 흐름(INVITE → 401 → Digest 인증 → 200 → ACK
+→ RTP → BYE)과 4절의 SDP, 5절의 RTP 헤더가 주석을 포함해 560줄 정도로 들어 있다. 트레이스와 나란히 놓고 읽어 볼 만하다.
