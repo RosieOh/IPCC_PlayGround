@@ -1,0 +1,17 @@
+{"t":"1792219495.120224","kind":"agent","id":"PJSIP/9002","name":"SIPP-9002","from":"LoggedOut","to":"Ready","reason":"","call":""}
+{"t":"1792219495.374073","kind":"call","id":"1792219495.38","from":"","to":"Entered","queue":"","customer":"9001","agent":""}
+{"t":"1792219497.287195","kind":"call","id":"1792219495.38","from":"Entered","to":"Queued","queue":"support","customer":"9001","agent":""}
+{"t":"1792219497.290573","kind":"agent","id":"PJSIP/9002","name":"SIPP-9002","from":"Ready","to":"Ringing","reason":"","call":"1792219495.38"}
+{"t":"1792219497.290573","kind":"call","id":"1792219495.38","from":"Queued","to":"Alerting","queue":"support","customer":"9001","agent":""}
+{"t":"1792219498.296171","kind":"agent","id":"PJSIP/9002","name":"SIPP-9002","from":"Ringing","to":"Talking","reason":"","call":"1792219495.38"}
+{"t":"1792219498.296171","kind":"call","id":"1792219495.38","from":"Alerting","to":"Connected","queue":"support","customer":"9001","agent":"PJSIP/9002"}
+{"t":"1792219499.297507","kind":"agent","id":"PJSIP/9002","name":"SIPP-9002","from":"Talking","to":"Hold","reason":"","call":"1792219495.38"}
+{"t":"1792219499.297507","kind":"call","id":"1792219495.38","from":"Connected","to":"Held","queue":"support","customer":"9001","agent":"PJSIP/9002"}
+{"t":"1792219501.302017","kind":"agent","id":"PJSIP/9002","name":"SIPP-9002","from":"Hold","to":"Talking","reason":"","call":"1792219495.38"}
+{"t":"1792219501.302017","kind":"call","id":"1792219495.38","from":"Held","to":"Connected","queue":"support","customer":"9001","agent":"PJSIP/9002"}
+{"t":"1792219502.309005","kind":"agent","id":"PJSIP/9002","name":"SIPP-9002","from":"Talking","to":"ACW","reason":"후처리","call":"1792219495.38"}
+{"t":"1792219502.309005","kind":"action","action":"QueuePause","iface":"PJSIP/9002","paused":true,"reason":"후처리"}
+{"t":"1792219502.310139","kind":"call","id":"1792219495.38","from":"Connected","to":"Ended","queue":"support","customer":"9001","agent":"PJSIP/9002"}
+{"t":"1792219502.310139","kind":"call_end","id":"1792219495.38","outcome":"completed:agent","queue":"support","customer":"9001","agent":"PJSIP/9002","wait_ms":1008,"talk_ms":4012}
+{"t":"1792219502.333382","kind":"agent","id":"PJSIP/9002","name":"SIPP-9002","from":"ACW","to":"LoggedOut","reason":"","call":""}
+{"kind":"snapshot","agents":[{"id":"PJSIP/9002","name":"SIPP-9002","state":"LoggedOut","reason":"","call":""}],"calls":[]}

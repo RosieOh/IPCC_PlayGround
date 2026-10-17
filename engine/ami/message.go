@@ -55,11 +55,34 @@ func (m Message) With(key, value string) Message {
 // Lookup은 key의 첫 번째 값을 찾는다. AMI 키는 대소문자를 구분하지 않는다.
 func (m Message) Lookup(key string) (string, bool) {
 	for _, f := range m.Fields {
-		if strings.EqualFold(f.Key, key) {
+		if EqualFoldASCII(f.Key, key) {
 			return f.Value, true
 		}
 	}
 	return "", false
+}
+
+// EqualFoldASCII는 ASCII 글자만 대소문자를 무시하고 비교한다 (Rust의 eq_ignore_ascii_case).
+//
+// strings.EqualFold는 유니코드 규칙이라 켈빈 기호 "K"(U+212A)와 "k", 'ſ'(U+017F)와 "s"도 같다고 본다.
+// AMI 키는 ASCII이고, Rust 레거시와 판정이 달라지면 차분 테스트가 깨진다 (docs/07 10절).
+func EqualFoldASCII(a, b string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := 0; i < len(a); i++ {
+		x, y := a[i], b[i]
+		if 'A' <= x && x <= 'Z' {
+			x += 'a' - 'A'
+		}
+		if 'A' <= y && y <= 'Z' {
+			y += 'a' - 'A'
+		}
+		if x != y {
+			return false
+		}
+	}
+	return true
 }
 
 // Get은 key의 첫 번째 값을 돌려준다. 없으면 빈 문자열이다.
@@ -72,7 +95,7 @@ func (m Message) Get(key string) string {
 func (m Message) GetAll(key string) []string {
 	var vs []string
 	for _, f := range m.Fields {
-		if strings.EqualFold(f.Key, key) {
+		if EqualFoldASCII(f.Key, key) {
 			vs = append(vs, f.Value)
 		}
 	}
@@ -105,7 +128,7 @@ func (m Message) IsResponse() bool {
 func (m Message) withActionID(id string) Message {
 	fields := make([]Field, 0, len(m.Fields)+1)
 	for _, f := range m.Fields {
-		if !strings.EqualFold(f.Key, "ActionID") {
+		if !EqualFoldASCII(f.Key, "ActionID") {
 			fields = append(fields, f)
 		}
 	}

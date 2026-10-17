@@ -121,7 +121,7 @@ func (cfg Config) withDefaults() Config {
 type EventKind int
 
 const (
-	// KindAMI는 Asterisk가 보낸 이벤트다.
+	// KindAMI는 Asterisk가 보낸 이벤트다. SendListInline으로 보낸 액션의 응답도 여기로 온다.
 	KindAMI EventKind = iota
 	// KindConnected는 로그인 성공(재접속 포함)이다. 이 시점에 상태를 다시 맞춰야 한다.
 	KindConnected
@@ -189,6 +189,7 @@ type pendingAction struct {
 	action string
 	conn   net.Conn // 이 액션을 보낸 연결
 	list   bool     // 목록형 응답(EventList)을 기다리는가
+	inline bool     // 응답을 이벤트 스트림에도 흘리고, 목록 항목은 모으지 않는다 (SendListInline)
 	resp   Message
 	items  []Message
 	err    error
@@ -424,10 +425,15 @@ func (c *Client) readLoop(ctx context.Context, conn net.Conn, r *Reader, connID 
 		if err != nil {
 			return err
 		}
-		if id := msg.ActionID(); id != "" && c.deliver(id, msg) {
-			continue
+		forward := false
+		if id := msg.ActionID(); id != "" {
+			handled, fwd := c.deliver(id, msg)
+			if handled && !fwd {
+				continue
+			}
+			forward = fwd
 		}
-		if msg.IsResponse() {
+		if msg.IsResponse() && !forward {
 			// 기다리는 쪽이 없는 응답: 타임아웃으로 포기한 액션에 늦게 온 응답 등
 			c.log.Debug("짝 없는 응답", "actionid", msg.ActionID(), "response", msg.Get("Response"))
 			continue
@@ -440,23 +446,25 @@ func (c *Client) readLoop(ctx context.Context, conn net.Conn, r *Reader, connID 
 	}
 }
 
-// deliver는 msg가 기다리는 액션의 응답(또는 목록 항목)이면 그쪽에 넘기고 true를 돌려준다.
-func (c *Client) deliver(id string, msg Message) bool {
+// deliver는 msg가 기다리는 액션의 응답(또는 목록 항목)이면 그쪽에 넘기고 handled = true를 돌려준다.
+// forward는 넘긴 뒤에도 이벤트 스트림으로 흘려보내야 하는지다 (SendListInline의 응답).
+func (c *Client) deliver(id string, msg Message) (handled, forward bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	p, ok := c.pending[id]
 	if !ok {
-		return false
+		return false, false
 	}
 	switch {
 	case msg.IsResponse():
 		p.resp = msg
-		// 목록형이 아니거나, 오류라서 목록이 따라오지 않으면 여기서 끝
-		if !p.list || !strings.EqualFold(msg.Get("EventList"), "start") {
+		// 목록형이 아니거나, 오류라서 목록이 따라오지 않거나, 목록을 이벤트 스트림으로 흘릴 거면 여기서 끝.
+		// inline이면 pending에서 빠지므로 뒤따르는 목록 항목은 일반 이벤트처럼 흘러간다.
+		if !p.list || !strings.EqualFold(msg.Get("EventList"), "start") || p.inline {
 			delete(c.pending, id)
 			p.finish(nil)
 		}
-		return true
+		return true, p.inline
 	case p.list:
 		if strings.EqualFold(msg.Get("EventList"), "Complete") {
 			if n, err := strconv.Atoi(msg.Get("ListItems")); err == nil && n != len(p.items) {
@@ -467,10 +475,10 @@ func (c *Client) deliver(id string, msg Message) bool {
 		} else {
 			p.items = append(p.items, msg)
 		}
-		return true
+		return true, false
 	default:
 		// 목록을 기다리지 않는 액션의 ActionID가 달린 이벤트 → 일반 이벤트로 흘려보낸다
-		return false
+		return false, false
 	}
 }
 
@@ -492,7 +500,7 @@ func (c *Client) dropConn(conn net.Conn) {
 // Send는 액션을 보내고 응답 하나를 기다린다. "Response: Error"면 *ResponseError를 돌려준다.
 // ActionID는 Client가 붙인다(이미 있으면 바꾼다).
 func (c *Client) Send(ctx context.Context, action Message) (Message, error) {
-	p, err := c.send(ctx, action, false)
+	p, err := c.send(ctx, action, false, false)
 	if err != nil {
 		return Message{}, err
 	}
@@ -503,7 +511,7 @@ func (c *Client) Send(ctx context.Context, action Message) (Message, error) {
 // 목록 이벤트를 "EventList: Complete"까지 모아서 돌려준다. 목록 이벤트는 Events()로 나가지 않는다.
 // 목록형이 아닌 액션에 써도 응답 하나로 끝난다.
 func (c *Client) SendList(ctx context.Context, action Message) (Message, []Message, error) {
-	p, err := c.send(ctx, action, true)
+	p, err := c.send(ctx, action, true, false)
 	if err != nil {
 		return Message{}, nil, err
 	}
@@ -513,7 +521,22 @@ func (c *Client) SendList(ctx context.Context, action Message) (Message, []Messa
 	return p.resp, p.items, nil
 }
 
-func (c *Client) send(ctx context.Context, action Message, list bool) (*pendingAction, error) {
+// SendListInline은 목록형 액션을 보내되, 응답과 목록 항목·Complete를 모두 Events()로 '받은 순서 그대로' 흘려보낸다.
+// 호출한 쪽에는 응답만 돌려준다.
+//
+// SendList는 목록을 따로 모아 주므로, 목록 사이나 바로 뒤에 온 실시간 이벤트와의 순서를 알 수 없다.
+// 스냅샷과 실시간 이벤트를 한 고루틴에서 순서대로 처리해야 하는 상태머신은 이쪽을 쓴다.
+// 이벤트 스트림이 녹화 파일과 같은 모양(응답 → 항목 → Complete가 이벤트 사이에 끼어 있음)이 되므로
+// 녹화 재생과 같은 코드(state.Grouper)로 스냅샷을 묶을 수 있다.
+func (c *Client) SendListInline(ctx context.Context, action Message) (Message, error) {
+	p, err := c.send(ctx, action, true, true)
+	if err != nil {
+		return Message{}, err
+	}
+	return p.resp, p.respErr()
+}
+
+func (c *Client) send(ctx context.Context, action Message, list, inline bool) (*pendingAction, error) {
 	if _, ok := ctx.Deadline(); !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, c.cfg.ActionTimeout)
@@ -526,7 +549,7 @@ func (c *Client) send(ctx context.Context, action Message, list bool) (*pendingA
 		return nil, err
 	}
 
-	p := &pendingAction{action: name, list: list, done: make(chan struct{})}
+	p := &pendingAction{action: name, list: list, inline: inline, done: make(chan struct{})}
 	c.mu.Lock()
 	conn := c.conn
 	if conn == nil {

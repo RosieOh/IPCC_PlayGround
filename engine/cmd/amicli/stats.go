@@ -36,7 +36,7 @@ func runStats(args []string) error {
 		if err != nil {
 			return fmt.Errorf("%s: %w", path, err)
 		}
-		st.files = append(st.files, filepath.Base(path))
+		st.files = append(st.files, path)
 	}
 	if *md {
 		st.writeMarkdown(os.Stdout)
@@ -172,8 +172,8 @@ func (s *recordingStats) writeMarkdown(w io.Writer) {
 
 	fmt.Fprintln(w, "# 10. AMI 이벤트 사전 (자동 생성)")
 	fmt.Fprintln(w)
-	fmt.Fprintf(w, "> `make event-dict`로 다시 만든다. 손으로 고치지 않는다. 원본: `engine/testdata/`의 녹화 %d개 (%s), 이벤트 %d개.\n",
-		len(s.files), strings.Join(s.files, ", "), s.events)
+	fmt.Fprintf(w, "> `make event-dict`로 다시 만든다. 손으로 고치지 않는다. 원본: 녹화 %d개 (%s), 이벤트 %d개.\n",
+		len(s.files), filesByDir(s.files), s.events)
 	fmt.Fprintln(w, "> 이 환경(Asterisk 22.11)에서 실제로 본 이벤트와 필드만 있다. 녹화에 없는 이벤트는 `make rx c=\"manager show event 이름\"`으로 본다.")
 	fmt.Fprintln(w, ">")
 	fmt.Fprintln(w, "> **{채널}** = 채널 스냅샷 필드 14개 (`Channel` `ChannelState` `ChannelStateDesc` `CallerIDNum` `CallerIDName`")
@@ -233,13 +233,31 @@ func compressSnapshots(fields []string) []string {
 	return out
 }
 
+// filesByDir는 파일 목록을 디렉터리별로 묶는다: "`a/` x, y · `b/` z".
+func filesByDir(paths []string) string {
+	var dirs []string
+	byDir := map[string][]string{}
+	for _, p := range paths {
+		d := filepath.ToSlash(filepath.Dir(p)) + "/"
+		if _, ok := byDir[d]; !ok {
+			dirs = append(dirs, d)
+		}
+		byDir[d] = append(byDir[d], filepath.Base(p))
+	}
+	parts := make([]string, len(dirs))
+	for i, d := range dirs {
+		parts[i] = "`" + d + "` " + strings.Join(byDir[d], ", ")
+	}
+	return strings.Join(parts, " · ")
+}
+
 // eventMeanings는 이벤트 사전의 '엔진 입장의 의미' 칸이다. 근거는 docs/05-ami.md의 실측 내용이다.
 var eventMeanings = map[string]string{
 	"AgentCalled":          "큐가 상담원을 부른다 → 상담원 **벨울림**",
 	"AgentComplete":        "상담원 통화가 끝났다 → 상담원 **후처리**. 채널 정보 없이 올 수 있어 `Interface`로 상담원을 찾는다",
 	"AgentConnect":         "상담원이 받았다 → 상담원 **통화중**. 고객·상담원 채널 정보가 다 있어 '상담원 ↔ 콜' 짝을 여기서 잡는다",
 	"AgentDump":            "안내멘트 중에 상담원이 끊었다",
-	"AgentRingNoAnswer":    "상담원이 벨 시간 안에 받지 않았다 → 다시 **대기**, 무응답 횟수 +1",
+	"AgentRingNoAnswer":    "상담원이 벨 시간 안에 받지 않았다 → 다시 **대기**, 무응답 횟수 +1. `RingTime`이 **밀리초**다 (AgentConnect는 초)",
 	"BridgeCreate":         "채널을 이을 브리지가 생겼다",
 	"BridgeDestroy":        "브리지가 사라졌다",
 	"BridgeEnter":          "채널이 브리지에 들어갔다. 3개 이상이면 회의",
@@ -251,10 +269,10 @@ var eventMeanings = map[string]string{
 	"DialBegin":            "Dial(큐 포함)이 상대를 부르기 시작했다",
 	"DialEnd":              "Dial이 끝났다 (`DialStatus`: ANSWER, NOANSWER, BUSY …)",
 	"DialState":            "Dial 진행 중 상태 (RINGING 등)",
-	"FullyBooted":          "Asterisk가 모듈을 다 올렸다. 로그인 직후 한 번 온다",
+	"FullyBooted":          "Asterisk가 모듈을 다 올렸다. 이미 부팅됐으면 로그인 응답 바로 뒤에(Timestamp 없음), 부팅 중이면 끝날 때 온다. 엔진은 이걸 받고 재동기화한다",
 	"Hangup":               "채널이 끊겼다 (`Cause`). 콜의 마지막 채널이면 콜 종료",
 	"HangupRequest":        "끊으라는 요청이 왔다 (상대가 끊음 등)",
-	"Hold":                 "보류",
+	"Hold":                 "보류. 보류를 건 쪽(상담원 채널)에 온다. 어텐디드 전환을 시작할 때도 온다 → 상담원 **보류**",
 	"LocalBridge":          "Local 채널 쌍(;1/;2)이 서로 이어졌다. 가짜 상담원·가짜 고객 콜에서만 나온다",
 	"MusicOnHoldStart":     "대기음 시작 (큐 대기, 보류)",
 	"MusicOnHoldStop":      "대기음 끝",
@@ -264,7 +282,7 @@ var eventMeanings = map[string]string{
 	"Newexten":             "다이얼플랜 한 줄을 실행했다. 흐름 추적용, 양이 많다",
 	"Newstate":             "채널 상태가 바뀌었다 (`Up` = 응답)",
 	"OriginateResponse":    "비동기 Originate의 결과. `Response` 필드가 있지만 **이벤트**다",
-	"QueueCallerAbandon":   "고객이 기다리다 끊었다 → **포기호**",
+	"QueueCallerAbandon":   "고객이 기다리다 끊었다 → **포기호**. 큐 타임아웃 때도 온다: 고객 채널에 끊기 요청(HangupRequest)이 먼저 있었는지로 구분",
 	"QueueCallerJoin":      "고객이 큐에 들어왔다 → 대기 시작",
 	"QueueCallerLeave":     "고객이 큐에서 나갔다 (연결·포기·타임아웃 모두)",
 	"QueueMemberAdded":     "상담원이 큐에 들어왔다 (로그인)",
@@ -274,12 +292,22 @@ var eventMeanings = map[string]string{
 	"SoftHangupRequest":    "Asterisk 내부에서 끊으라는 요청이 났다",
 	"SuccessfulAuth":       "보안 이벤트: 로그인 성공 (다른 AMI 클라이언트 것도 보인다)",
 	"Shutdown":             "Asterisk가 종료한다 → 곧 연결이 끊긴다",
-	"Unhold":               "보류 해제",
-	"BlindTransfer":        "블라인드 호전환",
-	"AttendedTransfer":     "어텐디드 호전환",
+	"Unhold":               "보류 해제. 블라인드 전환 때는 Hold 없이 Unhold만 오고, 3자통화로 합쳐질 때는 오지 않는다",
+	"BlindTransfer":        "블라인드 호전환. `Linkedid`는 그대로이고 원래 상담원은 AgentComplete `Reason=transfer`",
+	"AttendedTransfer":     "어텐디드 호전환. `DestType`: Bridge = 넘기고 빠짐(AgentComplete `Reason=transfer`), Threeway = *3으로 3자통화(엔진이 보류를 푼다)",
 	"DTMFBegin":            "키 입력 시작",
-	"DTMFEnd":              "키 입력 끝",
+	"DTMFEnd":              "키 입력 끝. AMI Atxfer와 PlayDTMF(`Receive=true`)도 DTMF를 흉내 내서 여기 나온다",
 	"VarSet":               "채널 변수 설정 (manager.conf eventfilter로 거른다)",
 	"QueueMemberPenalty":   "상담원 우선순위가 바뀌었다",
 	"QueueMemberRinginuse": "상담원의 ringinuse 설정이 바뀌었다",
+
+	"BridgeMerge":              "두 브리지가 합쳐졌다 (3자통화: 전환용 브리지가 고객이 있는 브리지로 들어간다)",
+	"LocalOptimizationBegin":   "Local 채널 쌍을 빼고 양쪽을 직접 잇기 시작한다 (전환 뒤 등). 채널이 바뀌므로 Uniqueid로 따라가면 끊긴다",
+	"LocalOptimizationEnd":     "Local 채널 최적화가 끝났다",
+	"CoreShowChannel":          "CoreShowChannels(채널 목록)의 항목. 재동기화 스냅샷 재료",
+	"CoreShowChannelsComplete": "채널 목록 끝 (`EventList: Complete`). 엔진은 이 자리에서 채널 스냅샷 하나로 묶는다",
+	"QueueParams":              "QueueStatus의 큐 정보 항목 (대기 수, 응대·포기 수 등)",
+	"QueueMember":              "QueueStatus의 상담원 항목. 실시간 이벤트와 달리 `Name`/`Location`이다",
+	"QueueEntry":               "QueueStatus의 대기 고객 항목",
+	"QueueStatusComplete":      "QueueStatus 목록 끝. 엔진은 이 자리에서 큐 스냅샷 하나로 묶는다",
 }

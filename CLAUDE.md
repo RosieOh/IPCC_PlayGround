@@ -6,8 +6,11 @@
 ## 구조
 
 - `asterisk/` — Asterisk 22.11 이미지(Dockerfile)와 설정(`conf/`, 컨테이너 `/etc/asterisk`에 읽기 전용 마운트)
-- `engine/` — Go 모듈 `ipcc/engine`. `ami/`(AMI 클라이언트), `cmd/amicli/`(학습용 CLI), `testdata/`(AMI 녹화)
-- `tests/sipp/` — SIPp 시나리오 (컨테이너의 `/sipp`)
+- `engine/` — Go 모듈 `ipcc/engine`. `ami/`(AMI 클라이언트), `state/`(상태머신 코어, Rust 포팅), `live/`(상태머신을 AMI에 붙이는 껍데기),
+  `cmd/amicli/`(학습용 CLI), `cmd/state/`(녹화 재생), `cmd/engine/`(실시간 엔진), `testdata/`(Stage 1 녹화)
+- `engine/state/testdata/` — 시나리오 녹화(`*.ami`), 상담원 명령(`*.cmds`), 기대 출력(`*.golden.jsonl`, Rust가 만든다)
+- `legacy-rust/` — 상태머신의 Rust '레거시' 구현 (기준 구현, D-016). Docker로만 빌드한다
+- `tests/sipp/` — SIPp 시나리오 (컨테이너의 `/sipp`), `tests/state/replay-all.sh` — 두 구현 공용 재생 스크립트
 - `docs/` — 설계 문서. 결정을 바꾸면 `docs/09-decisions.md`에 항목을 추가한다
 
 ## 명령 (저장소 루트에서)
@@ -20,14 +23,17 @@
 | 단위 테스트 (gofmt + vet + race) | `make test` — 코드를 바꾸면 반드시 실행 |
 | lint (errcheck, exhaustive, errorlint) | `make lint` |
 | 실제 Asterisk로 전체 흐름 검증 | `make e2e` (재시작·재접속까지: `E2E_RESTART=1 make e2e`) |
-| CLI 빌드 | `make build` → `bin/amicli` |
+| 상태머신: Rust 테스트 / 차분 테스트 | `make rust-test` / `make diff-test` (모든 녹화에서 Rust 출력 = Go 출력 = 기대 출력) |
+| 상태머신: 기대 출력 다시 만들기 | `make golden` (Rust로만. Go에는 -update가 없다) |
+| 상태머신: 시나리오 다시 녹화 | `make scenarios` 또는 `make scenarios only=hold,three-way` |
+| 빌드 | `make build` → `bin/amicli`, `bin/state`(`replay [--cmds F] 녹화…`), `bin/engine`(실시간 엔진, 명령은 stdin) |
 | 가짜 상담원 / 가짜 콜 | `make sim-agents`, `make sim-call n=3`, `make sim-abandon` |
 | SIP 자동 테스트 | `make sip-register`, `make sip-echo`, `make sip-queue`, `make sip-agent-call` |
 | 음성(RTP) 경로 검사 | `make rtp-check` — Mac에서 602 에코로 RTP 왕복을 센다 |
 | 이벤트 녹화·재생·집계 | `bin/amicli watch -record DIR`, `bin/amicli replay [-only E1,E2] [-v] FILE`, `bin/amicli stats [-fields] FILE…` |
 | 이벤트 사전 다시 만들기 | `make event-dict` (testdata 녹화를 바꾸면 실행. docs/10은 손으로 고치지 않는다) |
 
-동작을 확인할 때는 사람에게 묻기 전에 직접 돌려 본다. 기본은 `make test && make lint && make e2e`(CI와 같다).
+동작을 확인할 때는 사람에게 묻기 전에 직접 돌려 본다. 기본은 `make test && make lint && make diff-test && make e2e`(CI와 같다).
 이벤트를 자세히 보려면 `bin/amicli watch -record <임시 디렉터리>`를 백그라운드로 띄우고
 `make sim-agents` + `make sim-call` → 녹화를 `bin/amicli replay`로 확인한다.
 변경은 브랜치 → PR → CI 통과 순서로 올린다 (D-013).
@@ -43,7 +49,8 @@
 - Asterisk 설정을 바꾸면 시작 로그에 WARNING/ERROR가 없는지 확인한다 (D-010):
   `make restart && sleep 5 && docker compose logs --since 15s asterisk | grep -E "WARNING|ERROR"`
 - 테스트가 실패하면 테스트를 고쳐서 통과시키지 말고 원인을 보고한다.
-- Stage 2 이후 과제(사용자가 직접 할 학습 과제)를 대신 구현하지 않는다. 요청받았을 때만 한다.
+- Stage 3 이후 과제(사용자가 직접 할 학습 과제)를 대신 구현하지 않는다. 요청받았을 때만 한다 (Stage 0~2는 요청으로 구현함).
+- 상태머신 동작을 바꿀 때는 Rust(`legacy-rust/`)를 먼저 고치고 → `make golden` → Go(`engine/state/`) → `make diff-test` 0 diff 순서로 한다.
 
 ## 자동 테스트 장치 (사람의 소프트폰 계정 1001~1003은 건드리지 않는다)
 
@@ -67,3 +74,8 @@
 - `OriginateResponse`는 `Response:` 필드를 가진 **이벤트**다. 다른 AMI 세션의 ActionID를 단 채로도 온다.
 - queue_log의 callid는 큐에 들어간 채널의 Uniqueid다 (Linkedid가 아니다).
 - Asterisk를 재시작하면 큐 멤버가 비워진다 (`persistentmembers = no`). 엔진이 다시 넣어야 한다.
+- Asterisk는 모듈을 다 올리기 전에도 AMI 로그인을 받는다. 재동기화는 `FullyBooted`를 받은 뒤에 한다.
+- 큐 타임아웃도 `QueueCallerAbandon`을 낸다. 고객 채널의 `HangupRequest`가 먼저 왔는지로 포기와 구분한다.
+- `RingTime`은 AgentConnect에서 초, AgentRingNoAnswer에서 밀리초다.
+- 벨이 울리는 중에 고객이 끊으면 상담원 쪽 이벤트(AgentRingNoAnswer 등)는 오지 않는다.
+- 전환·3자통화에서도 Linkedid는 그대로다. 3자통화로 합쳐질 때는 Unhold 대신 `AttendedTransfer DestType=Threeway`가 온다.

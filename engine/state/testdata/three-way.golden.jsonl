@@ -1,0 +1,17 @@
+{"t":"1792228785.680254","kind":"agent","id":"Local/1001@sim-agent","name":"SIM-1001","from":"LoggedOut","to":"Ready","reason":"","call":""}
+{"t":"1792228785.683179","kind":"call","id":"1792228785.0","from":"","to":"Entered","queue":"","customer":"","agent":""}
+{"t":"1792228787.593951","kind":"call","id":"1792228785.0","from":"Entered","to":"Queued","queue":"support","customer":"01098360001","agent":""}
+{"t":"1792228787.594642","kind":"agent","id":"Local/1001@sim-agent","name":"SIM-1001","from":"Ready","to":"Ringing","reason":"","call":"1792228785.0"}
+{"t":"1792228787.594642","kind":"call","id":"1792228785.0","from":"Queued","to":"Alerting","queue":"support","customer":"01098360001","agent":""}
+{"t":"1792228788.599020","kind":"agent","id":"Local/1001@sim-agent","name":"SIM-1001","from":"Ringing","to":"Talking","reason":"","call":"1792228785.0"}
+{"t":"1792228788.599020","kind":"call","id":"1792228785.0","from":"Alerting","to":"Connected","queue":"support","customer":"01098360001","agent":"Local/1001@sim-agent"}
+{"t":"1792228789.878895","kind":"agent","id":"Local/1001@sim-agent","name":"SIM-1001","from":"Talking","to":"Hold","reason":"","call":"1792228785.0"}
+{"t":"1792228789.878895","kind":"call","id":"1792228785.0","from":"Connected","to":"Held","queue":"support","customer":"01098360001","agent":"Local/1001@sim-agent"}
+{"t":"1792228794.436379","kind":"agent","id":"Local/1001@sim-agent","name":"SIM-1001","from":"Hold","to":"Talking","reason":"","call":"1792228785.0"}
+{"t":"1792228794.436379","kind":"call","id":"1792228785.0","from":"Held","to":"Connected","queue":"support","customer":"01098360001","agent":"Local/1001@sim-agent"}
+{"t":"1792228797.108360","kind":"agent","id":"Local/1001@sim-agent","name":"SIM-1001","from":"Talking","to":"ACW","reason":"후처리","call":"1792228785.0"}
+{"t":"1792228797.108360","kind":"action","action":"QueuePause","iface":"Local/1001@sim-agent","paused":true,"reason":"후처리"}
+{"t":"1792228802.448134","kind":"call","id":"1792228785.0","from":"Connected","to":"Ended","queue":"support","customer":"01098360001","agent":"Local/1001@sim-agent"}
+{"t":"1792228802.448134","kind":"call_end","id":"1792228785.0","outcome":"completed:agent","queue":"support","customer":"01098360001","agent":"Local/1001@sim-agent","wait_ms":1005,"talk_ms":8509}
+{"t":"1792228802.655899","kind":"agent","id":"Local/1001@sim-agent","name":"SIM-1001","from":"ACW","to":"LoggedOut","reason":"","call":""}
+{"kind":"snapshot","agents":[{"id":"Local/1001@sim-agent","name":"SIM-1001","state":"LoggedOut","reason":"","call":""}],"calls":[]}

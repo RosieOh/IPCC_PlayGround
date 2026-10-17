@@ -54,26 +54,29 @@ The Rust Book의 소유권(4장), 구조체·열거형·match(5~6장), 에러 �
 
 차분 테스트는 "출력 바이트가 같은가"로 판단한다. 그래서 출력 형식을 엄격히 정한다.
 
-- **입력**: AMI 녹화 파일 그대로 (`ami.Reader`로 읽히는 것). 필요하면 명령 파일(JSONL).
-- **실행**: `<구현> replay <녹화파일> > out.jsonl` — 두 구현이 같은 CLI를 갖는다.
-- **출력**: 상태 변화 한 줄당 JSON 객체 하나 (06 문서 10절의 형식).
+- **입력**: AMI 녹화 파일 그대로 (받은 바이트). 상담원 명령은 명령 파일 — 한 줄에 `<시각> <명령> <인터페이스> [인자…]`.
+- **실행**: `ipcc-state replay [--cmds F] 녹화…`(Rust) / `bin/state replay [--cmds F] 녹화…`(Go) — 인자와 출력이 같다.
+- **출력**: 한 줄에 JSON 객체 하나 (06 문서 10절). 끝에 스냅샷 한 줄.
 - **정규화 규칙**
-  - 키 순서를 고정한다. 맵을 그대로 직렬화하지 않는다 (Go map과 Rust HashMap은 순회 순서가 무작위다).
-  - 목록은 ID로 정렬해서 낸다.
-  - 시각은 AMI `Timestamp` **문자열 그대로**. 실수(float) 변환을 하지 않는다 (두 언어의 소수 출력 방식이 다르다).
+  - 키 순서를 고정한다. 두 언어 모두 직렬화 라이브러리 없이 '넣은 순서대로' 직접 쓴다
+    (`encoding/json`은 `<`·`>`·`&`를 `\u003c`로 바꾸고, 맵은 키 순서로 정렬한다. serde도 설정마다 다르다).
+  - 맵을 순회하는 곳은 모두 키로 정렬한다 (Go map은 순회 순서가 일부러 무작위다).
+  - 시각은 `Timestamp`를 정수 마이크로초로 읽어 계산하고, 낼 때 `초.마이크로초 6자리`로 쓴다. 실수(float)를 쓰지 않는다.
   - 숫자는 정수만. 비율·평균 같은 계산 값은 상태머신 출력에 넣지 않는다 (통계 계층의 일).
-  - 줄바꿈은 `\n`, 파일 끝에 개행 하나.
+  - 문자열은 `"` `\` 제어문자만 이스케이프하고 한글은 그대로. 줄바꿈은 `\n`.
 
 ## 5. 차분 테스트 하네스
 
 ```bash
-# 개념 (Stage 2에서 make diff-test로 만든다)
-for rec in engine/state/testdata/*.ami; do
-  ./legacy-rust/target/release/state replay "$rec" > /tmp/rust.jsonl
-  ./bin/state replay "$rec"                       > /tmp/go.jsonl
-  diff -u /tmp/rust.jsonl /tmp/go.jsonl || echo "MISMATCH: $rec"
-done
+make diff-test
+# 1. Rust(Docker rust:1.98.1)로 모든 녹화 재생 → 임시/rust/*.jsonl   (tests/state/replay-all.sh)
+# 2. Go로 같은 녹화 재생                       → 임시/go/*.jsonl
+# 3. diff -ru 임시/rust 임시/go
+# 4. 저장소의 기대 출력(*.golden.jsonl)이 Rust 출력과 같은지 (낡은 기대 출력 방지)
 ```
+
+녹화는 `engine/state/testdata/*.ami`(시나리오 11개 + 손으로 자른 `truncated.ami`)와 `engine/testdata/*.log`(Stage 1),
+명령 파일 `normal.cmds`까지 출력 15개다. CI의 `rust` 작업이 PR마다 돌린다.
 
 - 녹화가 곧 테스트 케이스다. 시나리오(정상, 포기, 무응답, 보류, 전환…)가 늘수록 하네스가 강해진다.
 - diff가 나면 **어느 쪽이 맞는지는 녹화와 06 문서로 판단**한다. Rust가 항상 정답은 아니다.
@@ -143,3 +146,55 @@ legacy-rust/src/agent.rs의 상담원 상태머신을 engine/state/agent.go로 �
 - [ ] 타임아웃과 취소가 `context`로 전달되는가. 끝나지 않는 고루틴은 없는가
 - [ ] 로그에 콜 ID(Linkedid)가 있는가
 - [ ] 출력 형식(4절)을 지키는가
+
+## 10. Stage 2 포팅에서 실제로 만난 것
+
+`legacy-rust/src/engine.rs`(테스트 포함 약 1,100줄) → `engine/state/state.go`(약 970줄). 첫 차분 테스트에서 출력 10개가 모두 같았다.
+운이 아니라 4절 계약 덕분이다: 출력에 맵 순서·실수·직렬화 라이브러리가 끼어들 자리를 처음부터 없앴다.
+
+### 관용구를 어떻게 옮겼나
+
+| Rust | Go | 메모 |
+|---|---|---|
+| `Option<i64>` (없을 수 있는 시각) | `optTime{at, set}` + `some(t)`, `o.or(d)` | 0을 '없음'으로 쓰면 0인 시각과 구분이 안 되고, `*int64`는 nil 역참조 위험. 타입으로 드러낸다 |
+| `BTreeMap` (순서 있는 맵) | `map` + 순회할 때마다 `sortedKeys()` | 빠뜨리면 **가끔만** 깨진다. `TestTimersFireInDeadlineKindIDOrder`가 50번 돌려 확인한다 |
+| `enum` + `match` | 정수 상수 + `switch` | 빠진 case는 `exhaustive` 린터가 잡는다. `CmdWrapUp` case를 지워 보니 `make lint`가 바로 실패했다 |
+| 데이터를 품은 `enum Input` | `Input{Kind, Msg, Items, Cmd}` | Go에는 합 타입이 없다. Kind와 맞지 않는 필드를 읽는 실수는 컴파일러가 못 막는다 → Kind `switch`를 한 곳에만 둔다 |
+| `self.agents[iface]` (없으면 panic) | `a := e.agents[iface]; if a == nil { return }` | 라이브러리 코드는 panic하지 않는다. 도달 가능한 경로에서는 동작이 같다 |
+| `std::mem::take(&mut a.reserved)` | `r := a.reserved; a.reserved = ""` | |
+| 빌림 검사기 때문에 목록을 먼저 `collect()`하고 바꾸기 | 맵을 정렬된 키로 돌면서 바로 바꾸기 | 루프 몸통이 **다른** 항목을 바꾸지 않을 때만 같다. 바꾼다면 Go도 먼저 모아야 한다 |
+| `read_to_string`은 UTF-8이 아니면 실패 | `utf8.Valid` 검사 → `ErrNotUTF8` | Go `string`은 아무 바이트나 담는다. 경계에서 막지 않으면 두 구현이 다르게 동작한다 |
+| `eq_ignore_ascii_case` | ~~`strings.EqualFold`~~ → `ami.EqualFoldASCII` | `EqualFold`는 유니코드 폴딩이라 켈빈 기호 `K`(U+212A)를 `k`로 본다. `TestKeysFoldASCIIOnly` |
+| `trim()`, `split_whitespace()` | `strings.TrimSpace`, `strings.Fields` | 둘 다 유니코드 White_Space 기준이라 같다 (확인하고 넘어간 것도 적어 둔다) |
+| `format!("{:06}", us % 1_000_000)` | `fmt.Sprintf("%06d", …)` | 음수가 아니면 같다. 시각은 음수가 될 수 없다 |
+| `i64::MAX`, `u32` | `maxInt64`, `int` | |
+
+### 차분 테스트가 찾은 레거시 버그
+
+Go 파서(`ami.Reader`)와 Rust 파서(`ami::parse`)를 나란히 읽다가 의심 지점을 찾았고, 녹화로 재현해서 차분 테스트에 넣었다.
+
+- **증상**: 녹화가 메시지 중간, 줄바꿈 **바로 뒤**에서 끊기면 (`…Interface: Local/1002@sim-agent\r\n`으로 끝남)
+  Rust는 그 반쪽 메시지를 처리하고 Go는 버린다. 끝에 `QueueMemberRemoved`가 걸리면 Rust만 상담원을 로그아웃시켰다.
+- **원인**: `text.split('\n')`은 마지막 줄바꿈 뒤에 빈 조각 `""`을 하나 더 내놓는다. 그걸 '빈 줄 = 메시지 끝'으로 봤다.
+- **판단**: Rust 함수의 문서 주석부터 "빈 줄 없이 끝난 마지막 메시지는 버린다"였다. Go가 명세대로고 레거시가 틀렸다.
+- **처리**: Rust를 `split_inclusive('\n')`로 고치고(줄바꿈으로 끝나야 줄이다), 재현 녹화 `truncated.ami`를 testdata에 남겼다.
+  이제 차분 테스트가 이 회귀를 계속 지킨다.
+
+실무에서 레거시가 운영 중이라 고칠 수 없다면, Go만 명세대로 만들고 차분 테스트에 **알려진 차이 목록**(녹화 이름 + 이유)을 둔다.
+어느 쪽이든 "Rust와 다르다"를 발견하면 고치기 전에 먼저 기록한다 (5절).
+
+### 녹화가 늘면서 바뀐 명세
+
+포팅이 끝난 뒤에 새 시나리오를 녹화하니 모델의 빈틈이 두 번 드러났다. 둘 다 **Rust를 먼저 고치고** → `make golden` →
+같은 수정을 Go에 → `make diff-test` 0 diff 순서로 반영했다.
+
+| 녹화 | 드러난 것 | 바꾼 것 |
+|---|---|---|
+| `three-way.ami` | 어텐디드 전환을 시작할 때 Hold가 오는데, *3으로 3자통화가 되면 Unhold가 오지 않는다. 상담원이 끝까지 Hold로 남았다 | `AttendedTransfer DestType=Threeway`에서 보류를 푼다 |
+| `ring-abandon.ami` | 벨이 울리는 중에 고객이 끊으면 상담원 쪽 이벤트가 하나도 없다. 정상 흐름인데 경고가 나왔다 | `QueueCallerAbandon`에서 벨이 울리던 상담원을 돌려보낸다 (무응답으로 세지 않는다) |
+
+### 차분 테스트 밖에 있는 것
+
+- **실시간 껍데기**(`engine/live`)는 Go에만 있다. 가짜 AMI 서버 단위 테스트와 e2e(`stepEngine`, `stepEngineResync`)로 검증한다.
+  e2e가 "재시작 직후 AMI는 붙는데 `QueueStatus`가 없다"를 찾아서 재동기화 시점을 FullyBooted로 옮겼다 (06 문서 7절).
+- `Engine.Advance`(입력 없이 시간만 흘리기)는 실시간에서만 쓰지만 API를 맞추려고 두 언어에 다 넣고 각자 단위 테스트를 뒀다.

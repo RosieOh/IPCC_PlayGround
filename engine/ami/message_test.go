@@ -193,3 +193,18 @@ func TestMarshalJSONKeepsOrderAndGroupsDuplicates(t *testing.T) {
 		t.Fatalf("json = %s\nwant   %s", b, want)
 	}
 }
+
+// AMI 키는 ASCII라서 대소문자만 무시한다. strings.EqualFold는 유니코드 폴딩이라
+// 켈빈 기호(U+212A)를 "k"로 보는데, Rust 레거시(eq_ignore_ascii_case)는 그렇지 않다.
+func TestKeysFoldASCIIOnly(t *testing.T) {
+	m := Message{Fields: []Field{{Key: "LINKEDID", Value: "1"}, {Key: "LinKedid", Value: "2"}}}
+	if got := m.Get("linkedid"); got != "1" {
+		t.Errorf("Get = %q", got)
+	}
+	if got := m.GetAll("linkedid"); len(got) != 1 {
+		t.Errorf("GetAll = %q (켈빈 기호 키가 섞이면 안 된다)", got)
+	}
+	if !strings.EqualFold("K", "k") || EqualFoldASCII("K", "k") {
+		t.Error("EqualFoldASCII는 유니코드 폴딩을 하지 않아야 한다")
+	}
+}

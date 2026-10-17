@@ -25,9 +25,20 @@ SIPP := $(COMPOSE) exec -T asterisk sipp 127.0.0.1:5060 -i 127.0.0.1 -p 5070 \
 # 상담원 전화기 역할(9002). pjsip.conf에서 9002를 127.0.0.1:5072 고정 주소로 부르므로 그 포트에서 기다린다
 SIPP_AGENT := $(COMPOSE) exec -T asterisk sipp -i 127.0.0.1 -p 5072 -mp 6100 -m 1 -nostdin -timeout 60s
 
+# Rust 레거시(legacy-rust)도 Docker 이미지로 빌드·실행한다 (로컬에 Rust 설치 불필요, CI와 같은 버전).
+# 저장소는 읽기 전용으로 마운트하고, 빌드 산출물·crate 캐시는 이름 있는 볼륨에 둔다.
+RUST_IMAGE  := rust:1.98.1-slim-bookworm
+RUST_DOCKER := docker run --rm -v "$(CURDIR):/repo:ro" -v ipcc-cargo-target:/target \
+	-v ipcc-cargo-registry:/usr/local/cargo/registry -e CARGO_TARGET_DIR=/target -w /repo/legacy-rust
+# 상태머신 녹화와 기대 출력. 재생하는 녹화는 STATE_DATA/*.ami(시나리오)와 engine/testdata/*.log(Stage 1 녹화)
+STATE_DATA  := engine/state/testdata
+STATE_RECS  := $(STATE_DATA) engine/testdata
+RUST_REPLAY_ALL := cargo build --release -q && /repo/tests/state/replay-all.sh /target/release/ipcc-state /out $(addprefix /repo/,$(STATE_RECS))
+
 .PHONY: help up up-lan down restart ps logs cli rx reload sngrep pcap sh \
 	build watch agent-login agent-logout sim-agents sim-logout sim-call sim-abandon \
-	test lint e2e rtp-check event-dict sip-register sip-echo sip-queue sip-agent-call clean clean-data
+	test lint e2e rtp-check event-dict scenarios rust-test golden diff-test \
+	sip-register sip-echo sip-queue sip-agent-call clean clean-data
 
 help: ## 이 목록
 	@awk 'BEGIN{FS=":.*## "} /^## /{printf "\n\033[1m%s\033[0m\n", substr($$0,4); next} /^[a-zA-Z_-]+:.*## /{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -74,8 +85,8 @@ sh: ## 컨테이너 셸
 	$(AST) bash
 
 ## Go 엔진 / AMI
-build: ## Go CLI 빌드 → bin/amicli
-	cd engine && go build -o ../bin/amicli ./cmd/amicli
+build: ## Go 빌드 → bin/amicli, bin/state(녹화 재생), bin/engine(실시간 엔진)
+	cd engine && go build -o ../bin/ ./cmd/amicli ./cmd/state ./cmd/engine
 
 watch: build ## AMI 이벤트 실시간 보기 + 원본 녹화 (recordings/)
 	$(AMICLI) watch -record recordings
@@ -114,8 +125,32 @@ e2e: ## 실제 Asterisk로 콜 흐름 전체 검증. 재시작까지 보려면 E
 rtp-check: ## 음성(RTP) 경로 검사: 이 Mac에서 602(에코)로 걸어 RTP가 양방향으로 오가는지 센다
 	cd engine && go run ./cmd/rtpcheck
 
-event-dict: build ## AMI 이벤트 사전 다시 만들기 (engine/testdata 녹화 → docs/10-event-dictionary.md)
-	$(AMICLI) stats -md engine/testdata/*.log > docs/10-event-dictionary.md
+event-dict: build ## AMI 이벤트 사전 다시 만들기 (engine/testdata, engine/state/testdata 녹화 → docs/10-event-dictionary.md)
+	$(AMICLI) stats -md engine/testdata/*.log $(filter-out %/truncated.ami,$(wildcard $(STATE_DATA)/*.ami)) > docs/10-event-dictionary.md
+
+## 상태머신 (Stage 2): Rust 레거시 → Go 포팅
+scenarios: ## 상태머신 테스트 녹화 다시 만들기 (실제 Asterisk, 약 1분 30초 → engine/state/testdata/*.ami). 고르기: only=hold,three-way
+	$(COMPOSE) up -d
+	cd engine && RECORD_SCENARIOS=$(CURDIR)/$(STATE_DATA) SCENARIOS=$(only) go test -tags e2e -count=1 -v -timeout 5m -run TestRecordScenarios ./e2e/
+
+rust-test: ## Rust 레거시 단위 테스트 (Docker)
+	$(RUST_DOCKER) $(RUST_IMAGE) cargo test
+
+golden: ## Rust 레거시로 기대 출력 다시 만들기 (engine/state/testdata/*.golden.jsonl). Go 테스트가 이것과 비교한다
+	@tmp=$$(mktemp -d) && trap 'rm -rf "$$tmp"' EXIT && \
+	 $(RUST_DOCKER) -v "$$tmp:/out" $(RUST_IMAGE) sh -c '$(RUST_REPLAY_ALL)' && \
+	 cp "$$tmp"/*.golden.jsonl $(STATE_DATA)/ && ls $(STATE_DATA)/*.golden.jsonl
+
+diff-test: ## 차분 테스트: 모든 녹화에서 Rust 레거시와 Go 포팅의 출력이 바이트 단위로 같은지 (Docker)
+	@tmp=$$(mktemp -d) && trap 'rm -rf "$$tmp"' EXIT && mkdir "$$tmp/rust" "$$tmp/go" && \
+	 $(RUST_DOCKER) -v "$$tmp/rust:/out" $(RUST_IMAGE) sh -c '$(RUST_REPLAY_ALL)' && \
+	 (cd engine && go build -o "$$tmp/state" ./cmd/state) && \
+	 tests/state/replay-all.sh "$$tmp/state" "$$tmp/go" $(STATE_RECS) && \
+	 diff -ru "$$tmp/rust" "$$tmp/go" && \
+	 for f in "$$tmp"/rust/*.jsonl; do \
+	   cmp -s "$$f" "$(STATE_DATA)/$${f##*/}" || { echo "기대 출력이 Rust 출력과 다름: $${f##*/} (make golden)"; exit 1; }; \
+	 done && \
+	 echo "Rust = Go: $$(ls "$$tmp"/rust | wc -l | tr -d ' ')개 출력이 모두 같음"
 
 ## SIP 자동 테스트 (SIPp, 컨테이너 안에서 실행)
 sip-register: ## 9001로 등록 (REGISTER → 401 → 인증 → 200)

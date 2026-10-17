@@ -1,6 +1,7 @@
 # 푸시와 PR마다 로컬과 같은 make 명령으로 검증한다.
-#   go  — make test (gofmt, vet, race) + golangci-lint
-#   e2e — 실제 Asterisk 컨테이너로 콜 흐름 전체 (make e2e, 재시작 후 재접속 포함)
+#   go   — make test (gofmt, vet, race, 상태머신 골든 테스트) + golangci-lint
+#   rust — Rust 레거시 단위 테스트 + 차분 테스트 (모든 녹화에서 Rust와 Go의 출력이 바이트 단위로 같은지)
+#   e2e  — 실제 Asterisk 컨테이너로 콜 흐름 전체 (make e2e, 상태머신 엔진, 재시작 후 재접속·재동기화 포함)
 name: CI
 
 on:
@@ -42,6 +43,25 @@ jobs:
           version: v2.14.0 # Makefile의 GOLANGCI_LINT_VERSION과 같게
           working-directory: engine
 
+  rust:
+    name: Rust 레거시 · 차분 테스트
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: engine/go.mod
+          cache: false
+
+      # Rust는 Makefile의 RUST_IMAGE(Docker)로 돌린다. 로컬과 같은 버전이다
+      - name: cargo test
+        run: make rust-test
+
+      - name: 차분 테스트 — 모든 녹화에서 Rust 출력 = Go 출력 = 기대 출력
+        run: make diff-test
+
   e2e:
     name: E2E (실제 Asterisk)
     runs-on: ubuntu-latest
@@ -68,7 +88,7 @@ jobs:
           cache-from: type=gha,scope=asterisk
           cache-to: type=gha,scope=asterisk,mode=max
 
-      - name: E2E — 로그인, 정상·포기·SIP 콜, SIP 상담원, 음성 경로, 재시작 후 재접속
+      - name: E2E — 로그인, 정상·포기·SIP 콜, SIP 상담원, 상태머신 엔진, 음성 경로, 재시작 후 재접속·재동기화
         run: make e2e
         env:
           E2E_RESTART: "1"

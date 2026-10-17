@@ -14,7 +14,7 @@
 |---|---|---|---|
 | 0 | 전화부터 걸어보기 (Asterisk, SIP) | 3~5일 | 환경 ✅ / 자동화·해설 ✅ / 소프트폰·Wireshark는 사람 몫 |
 | 1 | Go AMI 클라이언트 | 1~2주 | 레퍼런스 ✅ / 과제 4개 구현 ✅ / 이벤트 사전 ✅ |
-| 2 | 상태머신: 콜·상담원·큐 (Rust→Go 리허설) | 2~3주 | 설계 초안 ([06](06-state-model.md), [07](07-rust-to-go.md)) |
+| 2 | 상태머신: 콜·상담원·큐 (Rust→Go 리허설) | 2~3주 | Rust 레거시 ✅ / Go 포팅 ✅ / 차분 테스트 ✅ / 실시간 엔진 ✅ ([06](06-state-model.md), [07](07-rust-to-go.md)) |
 | 3 | 실시간 모니터링 (Node.js 게이트웨이, 화면) | 1~2주 | 계획 |
 | 4 | MySQL 이력·통계 | 1~2주 | 계획 |
 | 5 | ARS (Go FastAGI) | 1주 | 계획 |
@@ -101,23 +101,40 @@
 ## Stage 2. 상태머신: 콜 · 상담원 · 큐
 
 **목표**: 이벤트를 받아 상태를 정확하게 유지한다. **Rust로 먼저 쓰고 Go로 포팅**해서 입사 후 업무를 리허설한다.
-→ 설계 초안 [06-state-model.md](06-state-model.md), 포팅 방법 [07-rust-to-go.md](07-rust-to-go.md)
+→ 상태 모델 [06-state-model.md](06-state-model.md), 포팅 방법과 실제 포팅 메모 [07-rust-to-go.md](07-rust-to-go.md) 10절
 
-**직접 해볼 것**
-- [ ] 제공된 녹화 두 개로 시작: `sim-normal-and-abandon.log`(가짜 상담원), `sip-agent-call.log`(실제 SIP 상담원)
-- [ ] 시나리오별 녹화 만들기 (소프트폰 또는 sim): 정상, 포기, 무응답 재분배, 보류, 블라인드 전환,
-  어텐디드 전환, 3자통화, 상담원이 먼저 끊음 / 고객이 먼저 끊음
-- [ ] 녹화를 보고 06 문서의 이벤트 → 상태 전이표를 검증하고 고치기 (확인한 사실만 반영)
-- [ ] Rust로 상태머신 코어(순수 함수) 작성 → `legacy-rust/`
-- [ ] Go로 포팅 → `engine/state/`, 두 구현을 같은 녹화로 비교하는 차분 테스트 하네스
-- [ ] 재동기화: 스냅샷과 메모리 상태를 비교해 보정하고, 보정 내역을 로그로 남기기
-- [ ] 엔진이 후처리(ACW) 타이머를 관리하고 끝나면 `QueuePause(false)`
-- [ ] 정책: 무응답 N회 → 자동 이석, 이석 예약(통화 중에 누르면 통화 끝난 뒤 이석)
+**제공된 것** ✅
+- `legacy-rust/` — Rust '레거시' 상태머신 (표준 라이브러리만, 단위 테스트 14개). `make rust-test` (Docker)
+- `engine/state/` — Go 포팅. 골든 테스트, 불변조건 검사(입력마다), 단위 테스트. `bin/state replay [--cmds F] 녹화…`
+- `make diff-test` — 녹화 13개 + 명령 파일 1개(출력 15개)를 Rust와 Go로 재생해 바이트 단위로 비교. CI의 `rust` 작업
+- `engine/live/`, `bin/engine` — 상태머신을 실제 Asterisk에 붙인 실시간 엔진. 후처리 타이머, QueueAdd/QueuePause/QueueRemove 실행,
+  FullyBooted 뒤 재동기화. 명령은 stdin (`login|ready|notready|wrapup|logout <인터페이스> [인자]`, `snapshot`)
+- `make scenarios [only=이름]` — 실제 Asterisk로 시나리오 녹화 11개를 다시 만든다 (`engine/state/testdata/README.md`)
+- e2e 두 단계: 엔진이 후처리·이석 예약을 큐 멤버에 반영 / Asterisk 재시작 뒤 엔진이 상담원을 다시 넣음
+- 이 단계에서 찾은 것
+  - 녹화로 확인한 AMI 동작 7개 (05 문서 6절 15~21번): FullyBooted 전 로그인, 타임아웃도 Abandon, RingTime 단위,
+    Hold의 채널, 전환·3자통화의 Linkedid, Atxfer의 DTMF, 벨 중 포기
+  - 레거시 파서 버그 1건 — Go와의 비교로 찾고 `truncated.ami`로 고정 (07 문서 10절)
+  - 새 녹화가 드러낸 모델의 빈틈 2개 (3자통화의 보류 해제, 벨 중 포기) → Rust → Go 순서로 반영
+
+**직접 해볼 것** (✅ = 구현·해설을 넣어 둠. 코드를 읽고 설명하고 바꿔 보는 것으로 공부한다)
+- [x] 제공된 녹화 두 개로 시작 → 두 녹화도 차분 테스트에 들어 있다 (`engine/testdata/*.log`)
+- [x] 시나리오별 녹화: 정상, 포기, 무응답 재분배, 벨 중 포기, 고객이 먼저 끊음, 큐 타임아웃, 보류(실제 SIP),
+  블라인드 전환, 어텐디드 전환, 3자통화, 실제 SIP 상담원 → `make scenarios`
+- [x] 녹화를 보고 06 문서의 전이표를 검증하고 고치기 → 06 문서 4~6절 (행마다 근거 녹화를 적었다)
+- [x] Rust로 상태머신 코어(순수 함수) 작성 → `legacy-rust/src/engine.rs`
+- [x] Go로 포팅 + 차분 테스트 하네스 → `engine/state/`, `make diff-test`, `tests/state/replay-all.sh`
+- [x] 재동기화: 스냅샷과 메모리 상태를 비교해 보정하고 경고 줄로 남기기 → 06 문서 7절, e2e 재시작 단계
+- [x] 엔진이 후처리(ACW) 타이머를 관리하고 끝나면 `QueuePause(false)` → `engine/live`, e2e 엔진 단계 (정책 2초 → 2초 뒤 대기)
+- [x] 정책: 무응답 N회 → 자동 이석, 이석 예약 → `state.Policy`, `normal.cmds`
+- [ ] 새 과제: 06 문서 11절 (후처리 직후 race 녹화로 확인, 큐 대기열 모델, 브리지 참여자 모델 …)
+- [ ] 읽기 과제: `state.go`와 `engine.rs`를 나란히 놓고 07 문서 10절의 표를 보지 않고 다시 만들어 보기
+- [ ] 바꿔 보기 과제: 정책 하나를 추가(예: 후처리 상한을 상담원마다 다르게)하고 Rust → 기대 출력 → Go 순서로 반영해 0 diff 만들기
 
 **완료 기준**
-- [ ] 모든 시나리오 녹화의 replay 결과가 기대 스냅샷과 같다 (golden test)
-- [ ] Rust 구현과 Go 구현의 출력이 모든 녹화에서 같다 (차분 테스트)
-- [ ] `make test`, `make lint`(exhaustive 포함), `make e2e` 통과. 상태머신 시나리오를 e2e에도 추가
+- [x] 모든 시나리오 녹화의 replay 결과가 기대 출력과 같다 (golden test, `make test`)
+- [x] Rust 구현과 Go 구현의 출력이 모든 녹화에서 같다 (`make diff-test`, CI)
+- [x] `make test`, `make lint`(exhaustive 포함), `make e2e` 통과. 상태머신 시나리오를 e2e에도 추가
 
 ---
 
