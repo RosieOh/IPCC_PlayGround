@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!--
+  '상담원 전화기' 역할의 UAS 시나리오. 큐가 PJSIP/9002를 부르면 받는다.
+
+    INVITE → 180 → (1초 벨) → 200(SDP) → ACK → (-d 밀리초 통화) → 상담원이 BYE → 200
+
+  pjsip.conf의 9002는 고정 주소 127.0.0.1:5072라서, 이 시나리오를 -p 5072로 띄워 두어야 한다.
+  실행: make sip-agent-call   (상담원 9002 로그인 → 이 시나리오 대기 → 9001이 5000으로 발신)
+-->
+<scenario name="uas-agent">
+
+  <recv request="INVITE" crlf="true">
+    <action>
+      <!-- 상담원이 먼저 끊을 BYE를 만들려면 상대 주소와 From/To를 기억해 둬야 한다 -->
+      <ereg regexp="sip:[^>;]+" search_in="hdr" header="Contact:" check_it="true" assign_to="remote_contact"/>
+      <ereg regexp=".*" search_in="hdr" header="From:" check_it="true" assign_to="remote_from"/>
+      <ereg regexp=".*" search_in="hdr" header="To:" check_it="true" assign_to="local_to"/>
+    </action>
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 180 Ringing
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[pid]SIPpTag01[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: <sip:9002@[local_ip]:[local_port]>
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <pause milliseconds="1000"/>
+
+  <send retrans="500">
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[pid]SIPpTag01[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: <sip:9002@[local_ip]:[local_port]>
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=sipp 1 1 IN IP[local_ip_type] [local_ip]
+      s=-
+      c=IN IP[media_ip_type] [media_ip]
+      t=0 0
+      m=audio [media_port] RTP/AVP 0 101
+      a=rtpmap:0 PCMU/8000
+      a=rtpmap:101 telephone-event/8000
+      a=fmtp:101 0-16
+      a=sendrecv
+
+    ]]>
+  </send>
+
+  <recv request="ACK" crlf="true"/>
+
+  <!-- 통화 시간: 명령줄의 -d (밀리초) -->
+  <pause/>
+
+  <!-- 상담원이 끊는다. 내가 받은 요청의 To(+내 tag)가 From이 되고, 상대의 From이 To가 된다 -->
+  <send retrans="500">
+    <![CDATA[
+
+      BYE [$remote_contact] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: [$local_to];tag=[pid]SIPpTag01[call_number]
+      To: [$remote_from]
+      Call-ID: [call_id]
+      CSeq: 1 BYE
+      Contact: <sip:9002@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200" crlf="true"/>
+
+</scenario>

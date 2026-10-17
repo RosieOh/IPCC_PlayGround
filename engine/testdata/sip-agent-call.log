@@ -1,0 +1,995 @@
+Asterisk Call Manager/11.0.0
+Response: Success
+ActionID: amicli-host-33202-1
+Message: Authentication accepted
+
+Event: FullyBooted
+Privilege: system,all
+Uptime: 15
+LastReload: 15
+Status: Fully Booted
+
+Event: SuccessfulAuth
+Privilege: security,all
+Timestamp: 1792216828.514996
+EventTV: 2026-10-17T15:00:28.514+0900
+Severity: Informational
+Service: AMI
+EventVersion: 1
+AccountID: ipcc
+SessionID: 0xfffed8000c28
+LocalAddress: IPV4/TCP/0.0.0.0/5038
+RemoteAddress: IPV4/TCP/172.23.0.1/58616
+UsingPassword: 0
+SessionTV: 2026-10-17T15:00:28.514+0900
+
+Event: SuccessfulAuth
+Privilege: security,all
+Timestamp: 1792216830.918083
+EventTV: 2026-10-17T15:00:30.917+0900
+Severity: Informational
+Service: AMI
+EventVersion: 1
+AccountID: ipcc
+SessionID: 0xfffedc000c28
+LocalAddress: IPV4/TCP/0.0.0.0/5038
+RemoteAddress: IPV4/TCP/172.23.0.1/58622
+UsingPassword: 0
+SessionTV: 2026-10-17T15:00:30.917+0900
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792216830.918976
+Device: Queue:support_pause_PJSIP/9002
+State: NOT_INUSE
+
+Event: QueueMemberAdded
+Privilege: agent,all
+Timestamp: 1792216830.919064
+Queue: support
+MemberName: 상담원9002
+Interface: PJSIP/9002
+StateInterface: PJSIP/9002
+Membership: dynamic
+Penalty: 0
+CallsTaken: 0
+LastCall: 0
+LastPause: 0
+LoginTime: 1792216830
+InCall: 0
+Status: 1
+Paused: 0
+PausedReason: 
+Ringinuse: 0
+Wrapuptime: 0
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792216830.919085
+Device: Queue:support_avail
+State: NOT_INUSE
+
+Event: ChallengeSent
+Privilege: security,all
+Timestamp: 1792216832.118264
+EventTV: 2026-10-17T15:00:32.118+0900
+Severity: Informational
+Service: PJSIP
+EventVersion: 1
+AccountID: 9001
+SessionID: 1-75@127.0.0.1
+LocalAddress: IPV4/UDP/172.23.0.2/5060
+RemoteAddress: IPV4/UDP/127.0.0.1/5070
+Challenge: 
+
+Event: SuccessfulAuth
+Privilege: security,all
+Timestamp: 1792216832.120738
+EventTV: 2026-10-17T15:00:32.120+0900
+Severity: Informational
+Service: PJSIP
+EventVersion: 1
+AccountID: 9001
+SessionID: 1-75@127.0.0.1
+LocalAddress: IPV4/UDP/172.23.0.2/5060
+RemoteAddress: IPV4/UDP/127.0.0.1/5070
+UsingPassword: 1
+
+Event: Newchannel
+Privilege: call,all
+Timestamp: 1792216832.121796
+Channel: PJSIP/9001-00000000
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: internal
+Exten: 5000
+Priority: 1
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792216832.122107
+Channel: PJSIP/9001-00000000
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: internal
+Exten: 5000
+Priority: 1
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+Extension: 5000
+Application: Goto
+AppData: inbound,s,1
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792216832.122187
+Channel: PJSIP/9001-00000000
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 1
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+Extension: s
+Application: NoOp
+AppData: 고객 인입 "SIPp" <9001>
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792216832.122200
+Channel: PJSIP/9001-00000000
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 2
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+Extension: s
+Application: Answer
+AppData: 
+
+Event: Newstate
+Privilege: call,all
+Timestamp: 1792216832.122204
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 2
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792216832.122499
+Device: PJSIP/9001
+State: BUSY
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792216832.623867
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 3
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+Extension: s
+Application: Playback
+AppData: hello-world
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792216834.031884
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+Extension: s
+Application: Queue
+AppData: support,t,,,120
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792216834.031953
+Device: Queue:support
+State: RINGING
+
+Event: QueueCallerJoin
+Privilege: agent,all
+Timestamp: 1792216834.031963
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+Queue: support
+Position: 1
+Count: 1
+
+Event: MusicOnHoldStart
+Privilege: call,all
+Timestamp: 1792216834.032290
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+Class: default
+
+Event: Newchannel
+Privilege: call,all
+Timestamp: 1792216834.032938
+Channel: PJSIP/9002-00000001
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: 9002
+CallerIDName: SIPp 상담원
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: internal
+Exten: s
+Priority: 1
+Uniqueid: 1792216834.1
+Linkedid: 1792216832.0
+
+Event: AgentCalled
+Privilege: agent,all
+Timestamp: 1792216834.034816
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+DestChannel: PJSIP/9002-00000001
+DestChannelState: 0
+DestChannelStateDesc: Down
+DestCallerIDNum: 9002
+DestCallerIDName: SIPp 상담원
+DestConnectedLineNum: 9001
+DestConnectedLineName: SIPp
+DestLanguage: en
+DestAccountCode: 
+DestContext: internal
+DestExten: s
+DestPriority: 1
+DestUniqueid: 1792216834.1
+DestLinkedid: 1792216832.0
+Queue: support
+Interface: PJSIP/9002
+MemberName: 상담원9002
+
+Event: DialBegin
+Privilege: call,all
+Timestamp: 1792216834.034845
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+DestChannel: PJSIP/9002-00000001
+DestChannelState: 0
+DestChannelStateDesc: Down
+DestCallerIDNum: 9002
+DestCallerIDName: SIPp 상담원
+DestConnectedLineNum: <unknown>
+DestConnectedLineName: <unknown>
+DestLanguage: en
+DestAccountCode: 
+DestContext: internal
+DestExten: s
+DestPriority: 1
+DestUniqueid: 1792216834.1
+DestLinkedid: 1792216832.0
+DialString: PJSIP/9002
+
+Event: NewConnectedLine
+Privilege: call,all
+Timestamp: 1792216834.034855
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: 9002
+ConnectedLineName: SIPp 상담원
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+
+Event: Newstate
+Privilege: call,all
+Timestamp: 1792216834.035290
+Channel: PJSIP/9002-00000001
+ChannelState: 5
+ChannelStateDesc: Ringing
+CallerIDNum: 9002
+CallerIDName: SIPp 상담원
+ConnectedLineNum: 9001
+ConnectedLineName: SIPp
+Language: en
+AccountCode: 
+Context: internal
+Exten: s
+Priority: 1
+Uniqueid: 1792216834.1
+Linkedid: 1792216832.0
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792216834.035305
+Channel: PJSIP/9002-00000001
+ChannelState: 5
+ChannelStateDesc: Ringing
+CallerIDNum: 9002
+CallerIDName: SIPp 상담원
+ConnectedLineNum: 9001
+ConnectedLineName: SIPp
+Language: en
+AccountCode: 
+Context: internal
+Exten: s
+Priority: 1
+Uniqueid: 1792216834.1
+Linkedid: 1792216832.0
+Extension: s
+Application: AppQueue
+AppData: (Outgoing Line)
+
+Event: NewConnectedLine
+Privilege: call,all
+Timestamp: 1792216834.035308
+Channel: PJSIP/9002-00000001
+ChannelState: 5
+ChannelStateDesc: Ringing
+CallerIDNum: 9002
+CallerIDName: SIPp 상담원
+ConnectedLineNum: 9001
+ConnectedLineName: SIPp
+Language: en
+AccountCode: 
+Context: internal
+Exten: s
+Priority: 1
+Uniqueid: 1792216834.1
+Linkedid: 1792216832.0
+
+Event: DialState
+Privilege: call,all
+Timestamp: 1792216834.035319
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: 9002
+ConnectedLineName: SIPp 상담원
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+DestChannel: PJSIP/9002-00000001
+DestChannelState: 5
+DestChannelStateDesc: Ringing
+DestCallerIDNum: 9002
+DestCallerIDName: SIPp 상담원
+DestConnectedLineNum: 9001
+DestConnectedLineName: SIPp
+DestLanguage: en
+DestAccountCode: 
+DestContext: internal
+DestExten: s
+DestPriority: 1
+DestUniqueid: 1792216834.1
+DestLinkedid: 1792216832.0
+DialStatus: RINGING
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792216834.035327
+Device: PJSIP/9002
+State: BUSY
+
+Event: QueueMemberStatus
+Privilege: agent,all
+Timestamp: 1792216834.035599
+Queue: support
+MemberName: 상담원9002
+Interface: PJSIP/9002
+StateInterface: PJSIP/9002
+Membership: dynamic
+Penalty: 0
+CallsTaken: 0
+LastCall: 0
+LastPause: 0
+LoginTime: 1792216830
+InCall: 0
+Status: 3
+Paused: 0
+PausedReason: 
+Ringinuse: 0
+Wrapuptime: 0
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792216834.035614
+Device: Queue:support_avail
+State: INUSE
+
+Event: Newstate
+Privilege: call,all
+Timestamp: 1792216835.039995
+Channel: PJSIP/9002-00000001
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9002
+CallerIDName: SIPp 상담원
+ConnectedLineNum: 9001
+ConnectedLineName: SIPp
+Language: en
+AccountCode: 
+Context: internal
+Exten: s
+Priority: 1
+Uniqueid: 1792216834.1
+Linkedid: 1792216832.0
+
+Event: DialEnd
+Privilege: call,all
+Timestamp: 1792216835.040018
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: 9002
+ConnectedLineName: SIPp 상담원
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+DestChannel: PJSIP/9002-00000001
+DestChannelState: 6
+DestChannelStateDesc: Up
+DestCallerIDNum: 9002
+DestCallerIDName: SIPp 상담원
+DestConnectedLineNum: 9001
+DestConnectedLineName: SIPp
+DestLanguage: en
+DestAccountCode: 
+DestContext: internal
+DestExten: s
+DestPriority: 1
+DestUniqueid: 1792216834.1
+DestLinkedid: 1792216832.0
+DialStatus: ANSWER
+
+Event: MusicOnHoldStop
+Privilege: call,all
+Timestamp: 1792216835.040049
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: 9002
+ConnectedLineName: SIPp 상담원
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792216835.040356
+Device: Queue:support
+State: NOT_INUSE
+
+Event: QueueCallerLeave
+Privilege: agent,all
+Timestamp: 1792216835.040362
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: 9002
+ConnectedLineName: SIPp 상담원
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+Queue: support
+Position: 1
+Count: 0
+
+Event: AgentConnect
+Privilege: agent,all
+Timestamp: 1792216835.040385
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: 9002
+ConnectedLineName: SIPp 상담원
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+DestChannel: PJSIP/9002-00000001
+DestChannelState: 6
+DestChannelStateDesc: Up
+DestCallerIDNum: 9002
+DestCallerIDName: SIPp 상담원
+DestConnectedLineNum: 9001
+DestConnectedLineName: SIPp
+DestLanguage: en
+DestAccountCode: 
+DestContext: internal
+DestExten: s
+DestPriority: 1
+DestUniqueid: 1792216834.1
+DestLinkedid: 1792216832.0
+Queue: support
+Interface: PJSIP/9002
+MemberName: 상담원9002
+HoldTime: 1
+RingTime: 1
+
+Event: BridgeCreate
+Privilege: call,all
+Timestamp: 1792216835.040394
+BridgeUniqueid: 0e6e1770-29c6-493c-b65e-4183fd9ab238
+BridgeType: basic
+BridgeTechnology: simple_bridge
+BridgeCreator: <unknown>
+BridgeName: <unknown>
+BridgeNumChannels: 0
+BridgeVideoSourceMode: none
+
+Event: BridgeEnter
+Privilege: call,all
+Timestamp: 1792216835.040751
+BridgeUniqueid: 0e6e1770-29c6-493c-b65e-4183fd9ab238
+BridgeType: basic
+BridgeTechnology: simple_bridge
+BridgeCreator: <unknown>
+BridgeName: <unknown>
+BridgeNumChannels: 1
+BridgeVideoSourceMode: none
+Channel: PJSIP/9002-00000001
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9002
+CallerIDName: SIPp 상담원
+ConnectedLineNum: 9001
+ConnectedLineName: SIPp
+Language: en
+AccountCode: 
+Context: internal
+Exten: s
+Priority: 1
+Uniqueid: 1792216834.1
+Linkedid: 1792216832.0
+
+Event: BridgeEnter
+Privilege: call,all
+Timestamp: 1792216835.040893
+BridgeUniqueid: 0e6e1770-29c6-493c-b65e-4183fd9ab238
+BridgeType: basic
+BridgeTechnology: simple_bridge
+BridgeCreator: <unknown>
+BridgeName: <unknown>
+BridgeNumChannels: 2
+BridgeVideoSourceMode: none
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: 9002
+ConnectedLineName: SIPp 상담원
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+
+Event: ContactStatus
+Privilege: system,all
+Timestamp: 1792216835.240800
+URI: sip:9001@127.0.0.1:5070
+ContactStatus: Unreachable
+AOR: 9001
+EndpointName: 9001
+RoundtripUsec: 0
+
+Event: HangupRequest
+Privilege: call,all
+Timestamp: 1792216837.043537
+Channel: PJSIP/9002-00000001
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9002
+CallerIDName: SIPp 상담원
+ConnectedLineNum: 9001
+ConnectedLineName: SIPp
+Language: en
+AccountCode: 
+Context: internal
+Exten: s
+Priority: 1
+Uniqueid: 1792216834.1
+Linkedid: 1792216832.0
+
+Event: BridgeLeave
+Privilege: call,all
+Timestamp: 1792216837.043670
+BridgeUniqueid: 0e6e1770-29c6-493c-b65e-4183fd9ab238
+BridgeType: basic
+BridgeTechnology: simple_bridge
+BridgeCreator: <unknown>
+BridgeName: <unknown>
+BridgeNumChannels: 1
+BridgeVideoSourceMode: none
+Channel: PJSIP/9002-00000001
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9002
+CallerIDName: SIPp 상담원
+ConnectedLineNum: 9001
+ConnectedLineName: SIPp
+Language: en
+AccountCode: 
+Context: internal
+Exten: s
+Priority: 1
+Uniqueid: 1792216834.1
+Linkedid: 1792216832.0
+
+Event: BridgeLeave
+Privilege: call,all
+Timestamp: 1792216837.044065
+BridgeUniqueid: 0e6e1770-29c6-493c-b65e-4183fd9ab238
+BridgeType: basic
+BridgeTechnology: simple_bridge
+BridgeCreator: <unknown>
+BridgeName: <unknown>
+BridgeNumChannels: 0
+BridgeVideoSourceMode: none
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: 9002
+ConnectedLineName: SIPp 상담원
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+
+Event: BridgeDestroy
+Privilege: call,all
+Timestamp: 1792216837.044251
+BridgeUniqueid: 0e6e1770-29c6-493c-b65e-4183fd9ab238
+BridgeType: basic
+BridgeTechnology: simple_bridge
+BridgeCreator: <unknown>
+BridgeName: <unknown>
+BridgeNumChannels: 0
+BridgeVideoSourceMode: none
+
+Event: SoftHangupRequest
+Privilege: call,all
+Timestamp: 1792216837.044270
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: 9002
+ConnectedLineName: SIPp 상담원
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+Cause: 16
+
+Event: Cdr
+Privilege: cdr,all
+Timestamp: 1792216837.044838
+AccountCode: 
+Source: 9001
+Destination: s
+DestinationContext: inbound
+CallerID: "SIPp" <9001>
+Channel: PJSIP/9001-00000000
+DestinationChannel: PJSIP/9002-00000001
+LastApplication: Queue
+LastData: support,t,,,120
+StartTime: 2026-10-17 15:00:32
+AnswerTime: 2026-10-17 15:00:32
+EndTime: 2026-10-17 15:00:37
+Duration: 4
+BillableSeconds: 4
+Disposition: ANSWERED
+AMAFlags: DOCUMENTATION
+UniqueID: 1792216832.0
+UserField: 
+
+Event: Hangup
+Privilege: call,all
+Timestamp: 1792216837.045129
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: 9002
+ConnectedLineName: SIPp 상담원
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+Cause: 16
+Cause-txt: Normal Clearing
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792216837.045152
+Device: PJSIP/9001
+State: UNAVAILABLE
+
+Event: AgentComplete
+Privilege: agent,all
+Timestamp: 1792216837.045490
+Channel: PJSIP/9001-00000000
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9001
+CallerIDName: SIPp
+ConnectedLineNum: 9002
+ConnectedLineName: SIPp 상담원
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792216832.0
+Linkedid: 1792216832.0
+DestChannel: PJSIP/9002-00000001
+DestChannelState: 6
+DestChannelStateDesc: Up
+DestCallerIDNum: 9002
+DestCallerIDName: SIPp 상담원
+DestConnectedLineNum: 9001
+DestConnectedLineName: SIPp
+DestLanguage: en
+DestAccountCode: 
+DestContext: internal
+DestExten: s
+DestPriority: 1
+DestUniqueid: 1792216834.1
+DestLinkedid: 1792216832.0
+Queue: support
+Interface: PJSIP/9002
+MemberName: 상담원9002
+HoldTime: 1
+TalkTime: 2
+Reason: agent
+
+Event: Hangup
+Privilege: call,all
+Timestamp: 1792216837.045522
+Channel: PJSIP/9002-00000001
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 9002
+CallerIDName: SIPp 상담원
+ConnectedLineNum: 9001
+ConnectedLineName: SIPp
+Language: en
+AccountCode: 
+Context: internal
+Exten: s
+Priority: 1
+Uniqueid: 1792216834.1
+Linkedid: 1792216832.0
+Cause: 16
+Cause-txt: Normal Clearing
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792216837.045531
+Device: PJSIP/9002
+State: NOT_INUSE
+
+Event: QueueMemberStatus
+Privilege: agent,all
+Timestamp: 1792216837.045675
+Queue: support
+MemberName: 상담원9002
+Interface: PJSIP/9002
+StateInterface: PJSIP/9002
+Membership: dynamic
+Penalty: 0
+CallsTaken: 1
+LastCall: 1792216837
+LastPause: 0
+LoginTime: 1792216830
+InCall: 0
+Status: 1
+Paused: 0
+PausedReason: 
+Ringinuse: 0
+Wrapuptime: 0
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792216837.051203
+Device: Queue:support_avail
+State: NOT_INUSE
+
+Event: SuccessfulAuth
+Privilege: security,all
+Timestamp: 1792216837.074750
+EventTV: 2026-10-17T15:00:37.074+0900
+Severity: Informational
+Service: AMI
+EventVersion: 1
+AccountID: ipcc
+SessionID: 0xfffed000b978
+LocalAddress: IPV4/TCP/0.0.0.0/5038
+RemoteAddress: IPV4/TCP/172.23.0.1/62316
+UsingPassword: 0
+SessionTV: 2026-10-17T15:00:37.074+0900
+
+Event: QueueMemberRemoved
+Privilege: agent,all
+Timestamp: 1792216837.075350
+Queue: support
+MemberName: 상담원9002
+Interface: PJSIP/9002
+StateInterface: PJSIP/9002
+Membership: dynamic
+Penalty: 0
+CallsTaken: 1
+LastCall: 1792216837
+LastPause: 0
+LoginTime: 1792216830
+InCall: 0
+Status: 1
+Paused: 0
+PausedReason: 
+Ringinuse: 0
+Wrapuptime: 0
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792216837.075361
+Device: Queue:support_avail
+State: INUSE
+

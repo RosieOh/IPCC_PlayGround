@@ -22,10 +22,12 @@ GOLANGCI := docker run --rm -v "$(CURDIR)/engine:/src" -v ipcc-golangci-cache:/r
 # Docker의 NAT를 거치지 않으므로 SIP 시그널링·다이얼플랜·AMI 이벤트 검증에 집중할 수 있다.
 SIPP := $(COMPOSE) exec -T asterisk sipp 127.0.0.1:5060 -i 127.0.0.1 -p 5070 \
 	-key user 9001 -au 9001 -ap sipp9001 -m 1 -nostdin
+# 상담원 전화기 역할(9002). pjsip.conf에서 9002를 127.0.0.1:5072 고정 주소로 부르므로 그 포트에서 기다린다
+SIPP_AGENT := $(COMPOSE) exec -T asterisk sipp -i 127.0.0.1 -p 5072 -mp 6100 -m 1 -nostdin -timeout 60s
 
 .PHONY: help up up-lan down restart ps logs cli rx reload sngrep pcap sh \
 	build watch agent-login agent-logout sim-agents sim-logout sim-call sim-abandon \
-	test lint e2e sip-register sip-echo sip-queue clean clean-data
+	test lint e2e rtp-check sip-register sip-echo sip-queue sip-agent-call clean clean-data
 
 help: ## 이 목록
 	@awk 'BEGIN{FS=":.*## "} /^## /{printf "\n\033[1m%s\033[0m\n", substr($$0,4); next} /^[a-zA-Z_-]+:.*## /{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -109,6 +111,9 @@ e2e: ## 실제 Asterisk로 콜 흐름 전체 검증. 재시작까지 보려면 E
 	$(COMPOSE) up -d
 	cd engine && go test -tags e2e -count=1 -v -timeout 5m ./e2e/
 
+rtp-check: ## 음성(RTP) 경로 검사: 이 Mac에서 602(에코)로 걸어 RTP가 양방향으로 오가는지 센다
+	cd engine && go run ./cmd/rtpcheck
+
 ## SIP 자동 테스트 (SIPp, 컨테이너 안에서 실행)
 sip-register: ## 9001로 등록 (REGISTER → 401 → 인증 → 200)
 	$(SIPP) -sf /sipp/register.xml
@@ -118,6 +123,13 @@ sip-echo: ## 9001 → 600(에코) 3초 통화
 
 sip-queue: ## 9001 → 5000(대표번호) → 큐 → 상담원이 끊을 때까지 (먼저 make sim-agents)
 	$(SIPP) -sf /sipp/uac-call-wait-bye.xml -s 5000
+
+sip-agent-call: build ## 실제 SIP 상담원 흐름: 9001 → 5000 → PJSIP/9002(SIPp가 받고 2초 뒤 끊음). 가짜 상담원은 로그아웃 상태여야 한다
+	@$(AMICLI) agent login 9002
+	@$(SIPP_AGENT) -sf /sipp/uas-agent.xml -d 2000 > /dev/null & uas=$$!; sleep 1; \
+	 $(SIPP) -sf /sipp/uac-call-wait-bye.xml -s 5000; rc=$$?; \
+	 wait $$uas || { echo "상담원 SIPp(UAS) 실패"; rc=1; }; \
+	 $(AMICLI) agent logout 9002; exit $$rc
 
 ## 정리
 clean: ## 빌드 산출물 삭제 (bin/)
