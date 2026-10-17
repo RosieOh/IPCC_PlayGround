@@ -25,7 +25,8 @@ Asterisk 22 LTS (Docker, asterisk/)
         ▼
 Go CTI 엔진 (engine/)
   ami     접속·재접속·ActionID 매칭·녹화               Stage 1 ✅
-  state   콜/상담원/큐 상태머신, 재동기화               Stage 2
+  state   콜/상담원/큐 상태머신 코어 (I/O 없음)          Stage 2 ✅  ← legacy-rust/ (Rust 레거시)와 차분 테스트
+  live    상태머신 + AMI: 후처리 타이머, 액션, 재동기화   Stage 2 ✅
   ars     FastAGI 서버                                Stage 5
         │ Redis pub/sub (Stage 3)          │ MySQL (Stage 4)
         ▼                                  ▼
@@ -44,7 +45,7 @@ Node.js를 회사에서 정확히 어디에 쓰는지는 아직 모른다. 가�
 |---|---|---|---|---|
 | Asterisk | SIP 시그널링, 음성(RTP) 중계, 다이얼플랜, 큐 분배, 녹취 | 상담원 업무 상태(이석·후처리) 판단, 통계 | `asterisk/` | 0 ✅ |
 | AMI 클라이언트 | 접속·로그인·재접속, 액션 송신과 응답 매칭, 이벤트 전달, 원본 녹화 | 이벤트의 의미 해석 | `engine/ami` | 1 ✅ |
-| 상태머신 | 콜·상담원·큐 상태의 단일 기준(source of truth), 재동기화 | 화면 표시, 장기 통계 | `engine/state` (예정) | 2 |
+| 상태머신 | 콜·상담원·큐 상태의 단일 기준(source of truth), 재동기화 | 화면 표시, 장기 통계 | `engine/state`, `engine/live` | 2 ✅ |
 | 게이트웨이 | WebSocket(상담원·현황판), REST, 웹훅 | 콜 제어 판단 (엔진에 위임) | `gateway/` (예정) | 3, 6 |
 | Redis | 엔진 → 게이트웨이 이벤트 전달, 실시간 상태 캐시 | 영구 저장 | compose (예정) | 3 |
 | MySQL | 콜 이력, 상담원 상태 이력, 15분 집계 | 실시간 상태 | compose (예정) | 4 |

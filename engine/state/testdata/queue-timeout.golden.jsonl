@@ -1,0 +1,5 @@
+{"t":"1792219483.731555","kind":"call","id":"1792219483.36","from":"","to":"Entered","queue":"","customer":"","agent":""}
+{"t":"1792219485.637685","kind":"call","id":"1792219483.36","from":"Entered","to":"Queued","queue":"support","customer":"01096310001","agent":""}
+{"t":"1792219493.797219","kind":"call","id":"1792219483.36","from":"Queued","to":"Ended","queue":"support","customer":"01096310001","agent":""}
+{"t":"1792219493.797219","kind":"call_end","id":"1792219483.36","outcome":"timeout","queue":"support","customer":"01096310001","agent":"","wait_ms":8159,"talk_ms":0}
+{"kind":"snapshot","agents":[],"calls":[]}

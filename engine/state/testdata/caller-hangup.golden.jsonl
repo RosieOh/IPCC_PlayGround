@@ -1,0 +1,13 @@
+{"t":"1792219477.413938","kind":"agent","id":"Local/1001@sim-agent","name":"SIM-1001","from":"LoggedOut","to":"Ready","reason":"","call":""}
+{"t":"1792219477.415154","kind":"call","id":"1792219477.32","from":"","to":"Entered","queue":"","customer":"","agent":""}
+{"t":"1792219479.321646","kind":"call","id":"1792219477.32","from":"Entered","to":"Queued","queue":"support","customer":"01097340001","agent":""}
+{"t":"1792219479.321997","kind":"agent","id":"Local/1001@sim-agent","name":"SIM-1001","from":"Ready","to":"Ringing","reason":"","call":"1792219477.32"}
+{"t":"1792219479.321997","kind":"call","id":"1792219477.32","from":"Queued","to":"Alerting","queue":"support","customer":"01097340001","agent":""}
+{"t":"1792219480.329605","kind":"agent","id":"Local/1001@sim-agent","name":"SIM-1001","from":"Ringing","to":"Talking","reason":"","call":"1792219477.32"}
+{"t":"1792219480.329605","kind":"call","id":"1792219477.32","from":"Alerting","to":"Connected","queue":"support","customer":"01097340001","agent":"Local/1001@sim-agent"}
+{"t":"1792219483.421100","kind":"agent","id":"Local/1001@sim-agent","name":"SIM-1001","from":"Talking","to":"ACW","reason":"후처리","call":"1792219477.32"}
+{"t":"1792219483.421100","kind":"action","action":"QueuePause","iface":"Local/1001@sim-agent","paused":true,"reason":"후처리"}
+{"t":"1792219483.421108","kind":"call","id":"1792219477.32","from":"Connected","to":"Ended","queue":"support","customer":"01097340001","agent":"Local/1001@sim-agent"}
+{"t":"1792219483.421108","kind":"call_end","id":"1792219477.32","outcome":"completed:caller","queue":"support","customer":"01097340001","agent":"Local/1001@sim-agent","wait_ms":1007,"talk_ms":3091}
+{"t":"1792219483.423193","kind":"agent","id":"Local/1001@sim-agent","name":"SIM-1001","from":"ACW","to":"LoggedOut","reason":"","call":""}
+{"kind":"snapshot","agents":[{"id":"Local/1001@sim-agent","name":"SIM-1001","state":"LoggedOut","reason":"","call":""}],"calls":[]}

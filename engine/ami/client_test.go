@@ -3,6 +3,7 @@ package ami
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
@@ -267,6 +268,50 @@ func TestSendListCollectsItemsAndKeepsOtherEvents(t *testing.T) {
 	case ev := <-c.Events():
 		t.Fatalf("unexpected extra item %v %q", ev.Kind, ev.Msg.Event())
 	case <-time.After(50 * time.Millisecond):
+	}
+}
+
+// SendListInline은 응답·목록 항목·Complete를 실시간 이벤트와 섞인 '받은 순서 그대로' 이벤트 스트림으로 내보낸다.
+// 상태머신이 스냅샷과 실시간 이벤트를 녹화 재생과 같은 순서로 처리하기 위해 필요하다.
+func TestSendListInlineKeepsWireOrder(t *testing.T) {
+	f := newFakeAMI(t)
+	c, _ := startClient(t, f.addr(), nil)
+	fc := f.accept()
+	fc.acceptLogin()
+	expectKind(t, c, KindConnected, 1)
+
+	done := make(chan error, 1)
+	go func() {
+		resp, err := c.SendListInline(context.Background(), NewAction("CoreShowChannels"))
+		if err == nil && resp.Get("EventList") != "start" {
+			err = fmt.Errorf("resp = %v", resp)
+		}
+		done <- err
+	}()
+
+	id := fc.readAction().ActionID()
+	fc.send("Response", "Success", "ActionID", id, "EventList", "start", "Message", "Channels will follow")
+	fc.send("Event", "CoreShowChannel", "ActionID", id, "Uniqueid", "1.1")
+	fc.send("Event", "Hangup", "Uniqueid", "1.2") // 목록 사이에 끼어든 실시간 이벤트
+	fc.send("Event", "CoreShowChannelsComplete", "ActionID", id, "EventList", "Complete", "ListItems", "1")
+	fc.send("Event", "Hangup", "Uniqueid", "1.1") // 목록 뒤의 실시간 이벤트
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(testTimeout):
+		t.Fatal("SendListInline did not return")
+	}
+	var got []string
+	for range 5 {
+		ev := expectKind(t, c, KindAMI, 1)
+		got = append(got, ev.Msg.Get("Response")+ev.Msg.Event()+ev.Msg.Get("Uniqueid"))
+	}
+	want := "Success CoreShowChannel1.1 Hangup1.2 CoreShowChannelsComplete Hangup1.1"
+	if strings.Join(got, " ") != want {
+		t.Fatalf("stream = %q\n want %q", strings.Join(got, " "), want)
 	}
 }
 

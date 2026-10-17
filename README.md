@@ -6,7 +6,8 @@
 
 - **Asterisk 22 LTS** (Docker 소스 빌드) — SIP 내선, 다이얼플랜, 큐(ACD)
 - **Go CTI 엔진** — AMI 클라이언트 (재접속, 하트비트, ActionID 매칭, 원본 녹화)
-- 이후 단계: 상태머신(Rust → Go 포팅 리허설), Node.js 게이트웨이와 화면, MySQL 통계, ARS, 고객사 연동
+- **상태머신 (Rust → Go 포팅 리허설)** — Rust 레거시를 Go로 옮기고, 모든 녹화에서 두 구현의 출력이 바이트 단위로 같은지 차분 테스트
+- 이후 단계: Node.js 게이트웨이와 화면, MySQL 통계, ARS, 고객사 연동
 
 ## 빠른 시작
 
@@ -16,12 +17,16 @@
 make up            # Asterisk 빌드·기동 (첫 실행은 몇 분)
 make test          # 단위 테스트 (gofmt + vet + race)
 make lint          # golangci-lint (Docker로 실행)
-make e2e           # 실제 Asterisk로 콜 흐름 전체를 자동 검증 (약 40초)
+make diff-test     # 상태머신: Rust 레거시와 Go 포팅의 출력을 모든 녹화에서 비교 (Rust는 Docker로 실행)
+make e2e           # 실제 Asterisk로 콜 흐름 전체를 자동 검증 (약 1분)
 make rtp-check     # 이 Mac에서 음성(RTP)이 Asterisk까지 왕복하는지 검사
 
 make watch         # 터미널 1: AMI 이벤트 실시간 보기 (recordings/에 녹화)
 make sim-agents    # 터미널 2: 가짜 상담원 3명 로그인
 make sim-call n=3  # 가짜 고객 콜 3건 → 터미널 1에서 큐 인입 → 상담원 연결 → 종료 흐름 확인
+
+make build && bin/engine   # 상태머신 엔진을 실제 Asterisk에 붙이기 (stdin: login Local/1001@sim-agent 상담원1 → ready …)
+bin/state replay engine/state/testdata/three-way.ami   # 녹화를 상태머신으로 재생
 
 make sip-echo      # SIP 인증·통화 자동 테스트 (SIPp)
 make               # 전체 명령 목록
@@ -35,11 +40,13 @@ make               # 전체 명령 목록
 |---|---|---|
 | 0 | Asterisk 22.11 + PJSIP 내선(소프트폰 1001~1003, 자동 테스트 9001·9002), 에코(600·602)·멘트(601)·대표번호(5000 → 큐), Mac Docker NAT 설정, SIPp 시나리오, 음성 경로 검사(`rtp-check`) | ✅ 동작 확인 |
 | 1 | `engine/ami` AMI 클라이언트 + `amicli` (watch / action / replay / agent / sim-call), 단위 테스트, e2e, CI, 샘플 녹화 2종 | ✅ 동작 확인 |
-| 2~6 | 상태머신, 실시간 화면, 통계, ARS, 연동·장애 대응 | 설계 문서 / 계획 |
+| 2 | 상태머신: `legacy-rust/`(Rust 레거시) → `engine/state/`(Go 포팅), 차분 테스트(출력 15개 0 diff), 시나리오 녹화 11종, `engine/live`·`bin/engine`(후처리 타이머, 재동기화) | ✅ 동작 확인 |
+| 3~6 | 실시간 화면, 통계, ARS, 연동·장애 대응 | 설계 문서 / 계획 |
 
 실제 Asterisk로 확인한 것: 큐 인입 → 상담원 연결 → 종료(가짜 상담원, 실제 SIP 상담원), 대기 중 포기,
 SIP 등록·인증·통화, Mac에서 Docker 포트포워딩을 거친 음성(RTP) 왕복, Asterisk 재시작 후 자동 재접속,
 `docker pause` 때 하트비트로 끊김 감지 후 복구.
+상태머신 엔진이 후처리 타이머와 이석 예약을 큐 멤버에 반영하고, Asterisk 재시작 뒤 상담원을 다시 넣는 것까지.
 이 가운데 `docker pause`를 뺀 나머지는 `make e2e`로 자동화했고, CI가 PR과 `main` 푸시마다 돌린다.
 소프트폰으로 실제 소리를 들어 보는 확인만 사람 몫으로 남아 있다.
 
@@ -51,8 +58,9 @@ SIP 등록·인증·통화, Mac에서 Docker 포트포워딩을 거친 음성(RT
 
 ```text
 asterisk/     Dockerfile, entrypoint, conf/ (설정 파일)
-engine/       Go 모듈 ipcc/engine — ami/, rtpcheck/, cmd/, e2e/, testdata/
-tests/sipp/   SIPp 시나리오
+engine/       Go 모듈 ipcc/engine — ami/, state/(상태머신), live/(실시간 엔진), rtpcheck/, cmd/, e2e/, testdata/
+legacy-rust/  상태머신 Rust 레거시 (기준 구현)
+tests/        SIPp 시나리오(sipp/), 상태머신 재생 스크립트(state/)
 docs/         설계 문서
 data/         (git 제외) Asterisk 로그·CDR·queue_log
 recordings/   (git 제외) AMI 원본 녹화

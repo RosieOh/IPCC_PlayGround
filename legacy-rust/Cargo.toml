@@ -1,0 +1,9 @@
+[package]
+name = "ipcc-state"
+version = "0.1.0"
+edition = "2021"
+description = "IPCC 상태머신의 '레거시' 구현 (Rust). Go 포팅(engine/state)이 이 출력과 바이트 단위로 같아야 한다."
+publish = false
+
+# 외부 crate 없이 표준 라이브러리만 쓴다 (오프라인 빌드, Go 쪽과 같은 조건)
+[dependencies]

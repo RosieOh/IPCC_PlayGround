@@ -216,6 +216,31 @@ RingTime: 2
     `Status=3(BUSY)`, 통화가 끝나자 `1(NOT_INUSE)`였다 (`device_state_busy_at = 1`이라 채널 하나만 있어도 BUSY).
     상담원의 '벨울림'은 장치 상태가 아니라 AgentCalled로 판단한다.
 
+아래는 Stage 2에서 시나리오 녹화(`engine/state/testdata/*.ami`, `make scenarios`)와 e2e로 확인한 것이다.
+
+15. **Asterisk는 모듈을 다 올리기 전에도 AMI 로그인을 받는다.** 재시작 직후 바로 붙은 엔진이 보낸 `QueueStatus`가
+    `Invalid/unknown command: QueueStatus`로 실패했다 (app_queue가 아직 없다). e2e 재시작 단계가 찾았다.
+    `FullyBooted` 이벤트가 신호다. 소스(`main/manager.c` `action_login`)를 보면 이미 부팅된 상태면 로그인 응답 바로 뒤에
+    보내고(이때는 `Timestamp`가 없다), 부팅 중이면 끝나는 순간(`main/asterisk.c`) 모든 세션에 보낸다.
+    → 재동기화는 `Connected`가 아니라 FullyBooted를 받은 뒤에 한다.
+16. **큐 타임아웃도 `QueueCallerAbandon`을 낸다.** (`queue-timeout.ami`) app_queue가 타임아웃 때도 `record_abandoned()`를 부르고,
+    queue_log에는 `EXITWITHTIMEOUT`이 적힌다. 진짜 포기는 고객 채널의 `HangupRequest`가 Abandon보다 **먼저** 오고,
+    타임아웃은 끊기 요청 없이 Abandon이 온 뒤 다이얼플랜이 계속된다. 이 차이로 구분한다.
+17. **`RingTime`의 단위가 이벤트마다 다르다.** (`noanswer.ami`) `AgentConnect`의 `RingTime: 1`은 초,
+    `AgentRingNoAnswer`의 `RingTime: 15000`은 밀리초다.
+18. **Hold/Unhold는 보류를 건 쪽 채널에 온다.** (`hold.ami`) SIP 상담원이 re-INVITE(sendonly)로 보류하면 `PJSIP/9002` 채널에
+    Hold가 온다. 블라인드 전환 때는 Hold 없이 **Unhold만** 오고(`blind-transfer.ami`), 3자통화로 합쳐질 때는 Unhold가 오지 않는다.
+19. **전환과 3자통화에서도 Linkedid는 그대로다.** 블라인드·어텐디드 전환 대상과 3자통화 참여자 채널이 모두 원래 콜의 Linkedid를 가졌다.
+    원래 상담원의 AgentComplete는 전환이면 `Reason: transfer`, 3자통화에서 먼저 빠지면 `Reason: agent`였다.
+    전환 대상은 큐가 아니라 다이얼플랜이 부르므로 대상 쪽 Agent* 이벤트는 없다.
+20. **AMI `Atxfer`는 DTMF로 동작한다.** 상담원 채널에 `DTMFEnd`가 6개(`*2` + `1002`) 찍히고 그 사이에 Hold가 온다.
+    즉 features.conf의 `atxfer` 키를 누른 것처럼 흉내 낸다. 같은 방법으로 `PlayDTMF`에 `Receive: true`를 주면
+    채널이 키를 '받은' 것처럼 만들 수 있어서, `*3`(atxferthreeway)으로 3자통화를 만들었다 (`three-way.ami`).
+    3자통화가 되면 `BridgeMerge`(전환용 브리지 → 원래 브리지)와 `AttendedTransfer`(`DestType: Threeway`)가 온다.
+    일반 어텐디드 전환은 `DestType: Bridge`다.
+21. **벨이 울리는 중에 고객이 끊으면 상담원 쪽 이벤트가 없다.** (`ring-abandon.ami`) AgentRingNoAnswer도 AgentComplete도 없이,
+    상담원 채널의 `Hangup`과 `QueueCallerAbandon`만 온다. 상담원을 '벨울림'에서 돌려놓는 건 엔진이 Abandon을 보고 해야 한다.
+
 ## 7. 클라이언트 설계 (`engine/ami`)
 
 ### 구성
@@ -234,6 +259,7 @@ RingTime: 2
 | 연결 상태(`Connected`/`Disconnected`)를 **이벤트와 같은 채널**로 | 소비자가 "어디까지가 끊기기 전 이벤트인지" 순서로 알 수 있다 |
 | 읽기 루프와 소비자 사이에 **무제한 큐** | 소비자가 느려도 읽기는 멈추지 않는다 (`writetimeout`으로 끊기는 것 방지). 대신 `QueueDepth()`로 적체를 감시 |
 | 목록 항목은 `SendList`에만 | 스냅샷 결과가 실시간 이벤트로 새면 상태머신이 두 번 반영한다 |
+| 상태머신용으로 `SendListInline`을 따로 | 응답·목록 항목·Complete를 **받은 순서 그대로** `Events()`로 흘린다. 스냅샷과 실시간 이벤트의 앞뒤를 지킨다 (06 문서 7절) |
 | ActionID = `<호스트>-<pid>-<순번>` | 다른 세션 이벤트에 달린 ActionID와 겹치지 않게 |
 | 끊기면 기다리던 액션을 **즉시** 실패 (`ErrDisconnected`) | 타임아웃(10초)까지 붙잡혀 있지 않게 |
 | 녹화는 **받은 바이트만, 로그인 성공한 연결만** | 보낸 Secret은 파일에 남지 않고, 재접속 시도마다 빈 파일이 생기지 않는다 |
@@ -280,14 +306,15 @@ Ping 없이는 영원히 모른다. 실측: `docker compose pause` 18초 뒤 감
 
 ### 재동기화
 
-이벤트만으로 상태를 쌓는 엔진은 끊긴 동안의 변화를 모른다. 그래서 `Connected`를 받을 때마다 기준점을 다시 잡는다.
+이벤트만으로 상태를 쌓는 엔진은 끊긴 동안의 변화를 모른다. 그래서 다시 붙을 때마다 기준점을 다시 잡는다.
+`amicli watch`는 `Connected`를 받으면 바로 하고, 상태머신 엔진(`engine/live`)은 **`FullyBooted`를 받은 뒤에** 한다 (6절 15번).
 
 1. `CoreShowChannels` → 지금 살아 있는 채널
 2. `QueueStatus` → 큐 설정·누적 통계, 멤버(로그인·이석 상태), 대기 고객
-3. 메모리 상태와 비교해서 보정한다. 보정 내역은 로그로 남긴다 (Stage 2, [06 문서 7절](06-state-model.md#7-재동기화))
+3. 메모리 상태와 비교해서 보정한다. 보정 내역은 경고 줄로 남긴다 ([06 문서 7절](06-state-model.md#7-재동기화))
 
-주의: 스냅샷을 받는 동안에도 실시간 이벤트는 계속 쌓인다. 스냅샷 직후 처리하는 이벤트 중 일부는 이미 스냅샷에
-반영된 것일 수 있으므로, 이벤트 처리는 **같은 이벤트를 두 번 반영해도 결과가 같게(멱등)** 만든다.
+주의: 스냅샷을 받는 동안에도 실시간 이벤트는 계속 쌓인다. `SendList`로 받으면 목록과 그 사이·뒤 이벤트의 순서를 잃는다.
+엔진은 `SendListInline`으로 받아서 녹화와 같은 순서(응답 → 항목 → Complete가 이벤트 사이에 끼어 있음)로 처리한다.
 
 ## 8. 테스트 전략
 

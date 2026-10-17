@@ -31,6 +31,9 @@ const (
 	// 자동 테스트용 SIP 상담원 전화기. pjsip.conf에서 127.0.0.1:5072 고정 주소로 부른다.
 	sipAgentIface = "PJSIP/9002"
 	sipAgentName  = "SIPP-9002"
+
+	// 벨만 울리고 받지 않는 가짜 상담원 (extensions.conf의 [sim-noanswer])
+	noAnswerIface = "Local/1004@sim-noanswer"
 )
 
 var simExts = []string{"1001", "1002", "1003"}
@@ -65,10 +68,13 @@ func TestCallFlow(t *testing.T) {
 		{"SIP — 등록, 에코 통화, 대표번호로 큐 통화 (SIPp)", h.stepSIP},
 		{"상담원 3명 로그아웃", h.stepLogout},
 		{"실제 SIP 상담원 — SIP 고객 → 대표번호 → PJSIP/9002가 받고 먼저 끊음", h.stepSIPAgent},
+		{"상태머신 엔진 — 엔진이 후처리 타이머·이석 예약을 큐 멤버에 반영", h.stepEngine},
 		{"음성(RTP) 경로 — 포트포워딩을 거쳐 602 에코로 RTP 왕복", h.stepRTP},
 	}
 	if os.Getenv("E2E_RESTART") == "1" {
-		steps = append(steps, step{"Asterisk 재시작 → 자동 재접속", h.stepRestart})
+		steps = append(steps,
+			step{"Asterisk 재시작 → 자동 재접속", h.stepRestart},
+			step{"Asterisk 재시작 → 엔진이 재동기화로 상담원을 다시 넣음", h.stepEngineResync})
 	}
 	for _, s := range steps {
 		if !t.Run(s.name, s.fn) {
@@ -339,9 +345,10 @@ func (h *harness) requireNoRealActivity(t *testing.T) {
 	}
 }
 
-// isTestInterface는 테스트가 만들고 지우는 상담원(가짜 상담원, SIPp 상담원)인지 본다.
+// isTestInterface는 테스트가 만들고 지우는 상담원(가짜 상담원, 받지 않는 가짜 상담원, SIPp 상담원)인지 본다.
 func isTestInterface(iface string) bool {
-	return iface == sipAgentIface || (strings.HasPrefix(iface, "Local/") && strings.HasSuffix(iface, "@sim-agent"))
+	return iface == sipAgentIface || iface == noAnswerIface ||
+		(strings.HasPrefix(iface, "Local/") && strings.HasSuffix(iface, "@sim-agent"))
 }
 
 func (h *harness) send(t *testing.T, act ami.Message) ami.Message {
@@ -370,7 +377,7 @@ func (h *harness) sendList(t *testing.T, act ami.Message) (ami.Message, []ami.Me
 func (h *harness) removeTestAgents() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	ifaces := []string{sipAgentIface}
+	ifaces := []string{sipAgentIface, noAnswerIface}
 	for _, ext := range simExts {
 		ifaces = append(ifaces, simIface(ext))
 	}
@@ -397,14 +404,42 @@ func (h *harness) pauseSimAgents(t *testing.T, paused bool, reason string) {
 // patience초가 지나면 고객이 끊는다. 상담원은 1초 벨 뒤 받고 2초 통화한다.
 func (h *harness) originateCustomer(t *testing.T, num string, patience int) {
 	t.Helper()
+	h.originate(t, "customer", num, patience, 2)
+}
+
+// originate는 [sim]의 exten으로 가짜 고객 콜을 만든다. talk는 가짜 상담원의 통화 시간(초)이다.
+func (h *harness) originate(t *testing.T, exten, num string, patience, talk int) {
+	t.Helper()
+	h.originateRing(t, exten, num, patience, 1, talk)
+}
+
+// originateRing은 originate에 가짜 상담원의 벨 시간(초)까지 정한다.
+func (h *harness) originateRing(t *testing.T, exten, num string, patience, ring, talk int) {
+	t.Helper()
 	h.send(t, ami.NewAction("Originate").
-		With("Channel", "Local/customer@sim").
+		With("Channel", "Local/"+exten+"@sim").
 		With("Application", "Wait").
 		With("Data", strconv.Itoa(patience)).
 		With("CallerID", fmt.Sprintf(`"e2e" <%s>`, num)).
-		With("Variable", "__SIM_RING=1").
-		With("Variable", "__SIM_TALK=2").
+		With("Variable", "__SIM_RING="+strconv.Itoa(ring)).
+		With("Variable", "__SIM_TALK="+strconv.Itoa(talk)).
 		With("Async", "true"))
+}
+
+// waitIdle은 채널이 하나도 남지 않을 때까지 기다린다 (시나리오 사이를 깨끗하게 끊기 위해).
+func (h *harness) waitIdle(t *testing.T) {
+	t.Helper()
+	deadline := time.Now().Add(60 * time.Second)
+	for {
+		_, chans := h.sendList(t, ami.NewAction("CoreShowChannels"))
+		if len(chans) == 0 {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("60초가 지나도 채널 %d개가 남아 있음", len(chans))
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
 }
 
 func (h *harness) number() string {

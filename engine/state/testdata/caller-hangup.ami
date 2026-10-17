@@ -1,0 +1,1722 @@
+Asterisk Call Manager/11.0.0
+Response: Success
+ActionID: amicli-host-77732-1
+Message: Authentication accepted
+
+Event: FullyBooted
+Privilege: system,all
+Uptime: 390
+LastReload: 155
+Status: Fully Booted
+
+Event: SuccessfulAuth
+Privilege: security,all
+Timestamp: 1792219477.408508
+EventTV: 2026-10-17T15:44:37.408+0900
+Severity: Informational
+Service: AMI
+EventVersion: 1
+AccountID: ipcc
+SessionID: 0xfffed00087e8
+LocalAddress: IPV4/TCP/0.0.0.0/5038
+RemoteAddress: IPV4/TCP/172.23.0.1/62282
+UsingPassword: 0
+SessionTV: 2026-10-17T15:44:37.408+0900
+
+Response: Success
+ActionID: amicli-host-77732-2
+EventList: start
+Message: Channels will follow
+
+Event: CoreShowChannelsComplete
+ActionID: amicli-host-77732-2
+EventList: Complete
+ListItems: 0
+
+Response: Success
+ActionID: amicli-host-77732-3
+EventList: start
+Message: Queue status will follow
+
+Event: QueueParams
+Queue: support
+Max: 0
+Strategy: rrmemory
+Calls: 0
+Holdtime: 6
+TalkTime: 2
+Completed: 6
+Abandoned: 2
+ServiceLevel: 20
+ServicelevelPerf: 100.0
+ServicelevelPerf2: 100.0
+Weight: 0
+ActionID: amicli-host-77732-3
+
+Event: QueueStatusComplete
+ActionID: amicli-host-77732-3
+EventList: Complete
+ListItems: 1
+
+Response: Error
+ActionID: amicli-host-77732-4
+Message: Unable to remove interface: Not there
+
+Response: Error
+ActionID: amicli-host-77732-5
+Message: Unable to remove interface: Not there
+
+Response: Error
+ActionID: amicli-host-77732-6
+Message: Unable to remove interface: Not there
+
+Response: Error
+ActionID: amicli-host-77732-7
+Message: Unable to remove interface: Not there
+
+Response: Error
+ActionID: amicli-host-77732-8
+Message: Unable to remove interface: Not there
+
+Response: Success
+ActionID: amicli-host-77732-9
+EventList: start
+Message: Channels will follow
+
+Event: CoreShowChannelsComplete
+ActionID: amicli-host-77732-9
+EventList: Complete
+ListItems: 0
+
+Response: Success
+ActionID: amicli-host-77732-10
+Message: Added interface to queue
+
+Event: QueueMemberAdded
+Privilege: agent,all
+Timestamp: 1792219477.413938
+Queue: support
+MemberName: SIM-1001
+Interface: Local/1001@sim-agent
+StateInterface: Local/1001@sim-agent
+Membership: dynamic
+Penalty: 0
+CallsTaken: 0
+LastCall: 0
+LastPause: 0
+LoginTime: 1792219477
+InCall: 0
+Status: 1
+Paused: 0
+PausedReason: 
+Ringinuse: 0
+Wrapuptime: 0
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219477.413945
+Device: Queue:support_avail
+State: NOT_INUSE
+
+Response: Success
+ActionID: amicli-host-77732-11
+Message: Originate successfully queued
+
+Event: Newchannel
+Privilege: call,all
+Timestamp: 1792219477.415154
+Channel: Local/customer@sim-00000010;1
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: sim
+Exten: customer
+Priority: 1
+Uniqueid: 1792219477.32
+Linkedid: 1792219477.32
+
+Event: Newchannel
+Privilege: call,all
+Timestamp: 1792219477.415165
+Channel: Local/customer@sim-00000010;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: sim
+Exten: customer
+Priority: 1
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219477.415169
+Channel: Local/customer@sim-00000010;1
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: sim
+Exten: customer
+Priority: 1
+Uniqueid: 1792219477.32
+Linkedid: 1792219477.32
+Extension: customer
+Application: AppDial2
+AppData: (Outgoing Line)
+
+Event: NewCallerid
+Privilege: call,all
+Timestamp: 1792219477.415184
+Channel: Local/customer@sim-00000010;1
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: sim
+Exten: customer
+Priority: 1
+Uniqueid: 1792219477.32
+Linkedid: 1792219477.32
+CID-CallingPres: 0 (Presentation Allowed, Not Screened)
+
+Event: NewConnectedLine
+Privilege: call,all
+Timestamp: 1792219477.415187
+Channel: Local/customer@sim-00000010;1
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim
+Exten: customer
+Priority: 1
+Uniqueid: 1792219477.32
+Linkedid: 1792219477.32
+
+Event: NewCallerid
+Privilege: call,all
+Timestamp: 1792219477.415195
+Channel: Local/customer@sim-00000010;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim
+Exten: customer
+Priority: 1
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+CID-CallingPres: 0 (Presentation Allowed, Not Screened)
+
+Event: NewConnectedLine
+Privilege: call,all
+Timestamp: 1792219477.415196
+Channel: Local/customer@sim-00000010;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim
+Exten: customer
+Priority: 1
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+
+Event: LocalBridge
+Privilege: call,all
+Timestamp: 1792219477.415203
+LocalOneChannel: Local/customer@sim-00000010;1
+LocalOneChannelState: 0
+LocalOneChannelStateDesc: Down
+LocalOneCallerIDNum: 01097340001
+LocalOneCallerIDName: e2e
+LocalOneConnectedLineNum: 01097340001
+LocalOneConnectedLineName: e2e
+LocalOneLanguage: en
+LocalOneAccountCode: 
+LocalOneContext: sim
+LocalOneExten: customer
+LocalOnePriority: 1
+LocalOneUniqueid: 1792219477.32
+LocalOneLinkedid: 1792219477.32
+LocalTwoChannel: Local/customer@sim-00000010;2
+LocalTwoChannelState: 4
+LocalTwoChannelStateDesc: Ring
+LocalTwoCallerIDNum: 01097340001
+LocalTwoCallerIDName: e2e
+LocalTwoConnectedLineNum: 01097340001
+LocalTwoConnectedLineName: e2e
+LocalTwoLanguage: en
+LocalTwoAccountCode: 
+LocalTwoContext: sim
+LocalTwoExten: customer
+LocalTwoPriority: 1
+LocalTwoUniqueid: 1792219477.33
+LocalTwoLinkedid: 1792219477.32
+Context: sim
+Exten: customer
+LocalOptimization: Yes
+
+Event: DialBegin
+Privilege: call,all
+Timestamp: 1792219477.415301
+DestChannel: Local/customer@sim-00000010;1
+DestChannelState: 0
+DestChannelStateDesc: Down
+DestCallerIDNum: 01097340001
+DestCallerIDName: e2e
+DestConnectedLineNum: 01097340001
+DestConnectedLineName: e2e
+DestLanguage: en
+DestAccountCode: 
+DestContext: sim
+DestExten: customer
+DestPriority: 1
+DestUniqueid: 1792219477.32
+DestLinkedid: 1792219477.32
+DialString: customer@sim
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219477.415366
+Channel: Local/customer@sim-00000010;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim
+Exten: customer
+Priority: 1
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+Extension: customer
+Application: NoOp
+AppData: SIM 고객 01097340001
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219477.415376
+Channel: Local/customer@sim-00000010;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim
+Exten: customer
+Priority: 2
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+Extension: customer
+Application: Goto
+AppData: inbound,s,1
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219477.415492
+Channel: Local/customer@sim-00000010;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 1
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+Extension: s
+Application: NoOp
+AppData: 고객 인입 "e2e" <01097340001>
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219477.415499
+Channel: Local/customer@sim-00000010;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 2
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+Extension: s
+Application: Answer
+AppData: 
+
+Event: Newstate
+Privilege: call,all
+Timestamp: 1792219477.415505
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 2
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+
+Event: OriginateResponse
+Privilege: call,all
+Timestamp: 1792219477.415676
+ActionID: amicli-host-77732-11
+Response: Success
+Channel: Local/customer@sim-00000010;1
+Application: Wait
+Data: 6
+Reason: 4
+Uniqueid: 1792219477.32
+CallerIDNum: 01097340001
+CallerIDName: e2e
+
+Event: Newstate
+Privilege: call,all
+Timestamp: 1792219477.415725
+Channel: Local/customer@sim-00000010;1
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim
+Exten: customer
+Priority: 1
+Uniqueid: 1792219477.32
+Linkedid: 1792219477.32
+
+Event: DialEnd
+Privilege: call,all
+Timestamp: 1792219477.415730
+DestChannel: Local/customer@sim-00000010;1
+DestChannelState: 6
+DestChannelStateDesc: Up
+DestCallerIDNum: 01097340001
+DestCallerIDName: e2e
+DestConnectedLineNum: 01097340001
+DestConnectedLineName: e2e
+DestLanguage: en
+DestAccountCode: 
+DestContext: sim
+DestExten: customer
+DestPriority: 1
+DestUniqueid: 1792219477.32
+DestLinkedid: 1792219477.32
+DialStatus: ANSWER
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219477.416677
+Device: Local/customer@sim
+State: INUSE
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219477.416682
+Device: Local/customer@sim
+State: INUSE
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219477.916712
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 3
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+Extension: s
+Application: Playback
+AppData: hello-world
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219479.321614
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+Extension: s
+Application: Queue
+AppData: support,t,,,120
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219479.321639
+Device: Queue:support
+State: RINGING
+
+Event: QueueCallerJoin
+Privilege: agent,all
+Timestamp: 1792219479.321646
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+Queue: support
+Position: 1
+Count: 1
+
+Event: MusicOnHoldStart
+Privilege: call,all
+Timestamp: 1792219479.321792
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+Class: default
+
+Event: Newchannel
+Privilege: call,all
+Timestamp: 1792219479.321911
+Channel: Local/1001@sim-agent-00000011;1
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 1
+Uniqueid: 1792219479.34
+Linkedid: 1792219477.32
+
+Event: Newchannel
+Privilege: call,all
+Timestamp: 1792219479.321924
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: <unknown>
+CallerIDName: <unknown>
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 1
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219479.321929
+Channel: Local/1001@sim-agent-00000011;1
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 1
+Uniqueid: 1792219479.34
+Linkedid: 1792219477.32
+Extension: 1001
+Application: AppQueue
+AppData: (Outgoing Line)
+
+Event: NewCallerid
+Privilege: call,all
+Timestamp: 1792219479.321956
+Channel: Local/1001@sim-agent-00000011;1
+ChannelState: 0
+ChannelStateDesc: Down
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: <unknown>
+ConnectedLineName: <unknown>
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 1
+Uniqueid: 1792219479.34
+Linkedid: 1792219477.32
+CID-CallingPres: 0 (Presentation Allowed, Not Screened)
+
+Event: NewCallerid
+Privilege: call,all
+Timestamp: 1792219479.321980
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 1
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+CID-CallingPres: 0 (Presentation Allowed, Not Screened)
+
+Event: NewConnectedLine
+Privilege: call,all
+Timestamp: 1792219479.321981
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 1
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+
+Event: LocalBridge
+Privilege: call,all
+Timestamp: 1792219479.321989
+LocalOneChannel: Local/1001@sim-agent-00000011;1
+LocalOneChannelState: 0
+LocalOneChannelStateDesc: Down
+LocalOneCallerIDNum: 01097340001
+LocalOneCallerIDName: e2e
+LocalOneConnectedLineNum: <unknown>
+LocalOneConnectedLineName: <unknown>
+LocalOneLanguage: en
+LocalOneAccountCode: 
+LocalOneContext: sim-agent
+LocalOneExten: 1001
+LocalOnePriority: 1
+LocalOneUniqueid: 1792219479.34
+LocalOneLinkedid: 1792219477.32
+LocalTwoChannel: Local/1001@sim-agent-00000011;2
+LocalTwoChannelState: 4
+LocalTwoChannelStateDesc: Ring
+LocalTwoCallerIDNum: 01097340001
+LocalTwoCallerIDName: e2e
+LocalTwoConnectedLineNum: 01097340001
+LocalTwoConnectedLineName: e2e
+LocalTwoLanguage: en
+LocalTwoAccountCode: 
+LocalTwoContext: sim-agent
+LocalTwoExten: 1001
+LocalTwoPriority: 1
+LocalTwoUniqueid: 1792219479.35
+LocalTwoLinkedid: 1792219477.32
+Context: sim-agent
+Exten: 1001
+LocalOptimization: Yes
+
+Event: AgentCalled
+Privilege: agent,all
+Timestamp: 1792219479.321997
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+DestChannel: Local/1001@sim-agent-00000011;1
+DestChannelState: 0
+DestChannelStateDesc: Down
+DestCallerIDNum: 01097340001
+DestCallerIDName: e2e
+DestConnectedLineNum: 01097340001
+DestConnectedLineName: e2e
+DestLanguage: en
+DestAccountCode: 
+DestContext: sim-agent
+DestExten: s
+DestPriority: 1
+DestUniqueid: 1792219479.34
+DestLinkedid: 1792219477.32
+Queue: support
+Interface: Local/1001@sim-agent
+MemberName: SIM-1001
+
+Event: DialBegin
+Privilege: call,all
+Timestamp: 1792219479.322003
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+DestChannel: Local/1001@sim-agent-00000011;1
+DestChannelState: 0
+DestChannelStateDesc: Down
+DestCallerIDNum: 01097340001
+DestCallerIDName: e2e
+DestConnectedLineNum: <unknown>
+DestConnectedLineName: <unknown>
+DestLanguage: en
+DestAccountCode: 
+DestContext: sim-agent
+DestExten: 1001
+DestPriority: 1
+DestUniqueid: 1792219479.34
+DestLinkedid: 1792219477.32
+DialString: Local/1001@sim-agent
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219479.322009
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 1
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+Extension: 1001
+Application: NoOp
+AppData: SIM 상담원 1001 벨울림
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219479.322200
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 2
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+Extension: 1001
+Application: Set
+AppData: RING=1
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219479.322223
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 3
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+Extension: 1001
+Application: Set
+AppData: TALK=20
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219479.322229
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 4
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+Extension: 1001
+Application: Ringing
+AppData: 
+
+Event: Newstate
+Privilege: call,all
+Timestamp: 1792219479.322231
+Channel: Local/1001@sim-agent-00000011;1
+ChannelState: 5
+ChannelStateDesc: Ringing
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: s
+Priority: 1
+Uniqueid: 1792219479.34
+Linkedid: 1792219477.32
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219479.322232
+Channel: Local/1001@sim-agent-00000011;1
+ChannelState: 5
+ChannelStateDesc: Ringing
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: s
+Priority: 1
+Uniqueid: 1792219479.34
+Linkedid: 1792219477.32
+Extension: s
+Application: AppQueue
+AppData: (Outgoing Line)
+
+Event: NewConnectedLine
+Privilege: call,all
+Timestamp: 1792219479.322234
+Channel: Local/1001@sim-agent-00000011;1
+ChannelState: 5
+ChannelStateDesc: Ringing
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: s
+Priority: 1
+Uniqueid: 1792219479.34
+Linkedid: 1792219477.32
+
+Event: DialState
+Privilege: call,all
+Timestamp: 1792219479.322238
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+DestChannel: Local/1001@sim-agent-00000011;1
+DestChannelState: 5
+DestChannelStateDesc: Ringing
+DestCallerIDNum: 01097340001
+DestCallerIDName: e2e
+DestConnectedLineNum: 01097340001
+DestConnectedLineName: e2e
+DestLanguage: en
+DestAccountCode: 
+DestContext: sim-agent
+DestExten: s
+DestPriority: 1
+DestUniqueid: 1792219479.34
+DestLinkedid: 1792219477.32
+DialStatus: RINGING
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219479.322241
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 5
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+Extension: 1001
+Application: Wait
+AppData: 1
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219479.322410
+Device: Local/1001@sim-agent
+State: INUSE
+
+Event: QueueMemberStatus
+Privilege: agent,all
+Timestamp: 1792219479.322419
+Queue: support
+MemberName: SIM-1001
+Interface: Local/1001@sim-agent
+StateInterface: Local/1001@sim-agent
+Membership: dynamic
+Penalty: 0
+CallsTaken: 0
+LastCall: 0
+LastPause: 0
+LoginTime: 1792219477
+InCall: 0
+Status: 2
+Paused: 0
+PausedReason: 
+Ringinuse: 0
+Wrapuptime: 0
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219479.322422
+Device: Queue:support_avail
+State: INUSE
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219480.329080
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 4
+ChannelStateDesc: Ring
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 6
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+Extension: 1001
+Application: Answer
+AppData: 
+
+Event: Newstate
+Privilege: call,all
+Timestamp: 1792219480.329097
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 6
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219480.329175
+Device: Local/1001@sim-agent
+State: INUSE
+
+Event: Newstate
+Privilege: call,all
+Timestamp: 1792219480.329227
+Channel: Local/1001@sim-agent-00000011;1
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: s
+Priority: 1
+Uniqueid: 1792219479.34
+Linkedid: 1792219477.32
+
+Event: DialEnd
+Privilege: call,all
+Timestamp: 1792219480.329336
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+DestChannel: Local/1001@sim-agent-00000011;1
+DestChannelState: 6
+DestChannelStateDesc: Up
+DestCallerIDNum: 01097340001
+DestCallerIDName: e2e
+DestConnectedLineNum: 01097340001
+DestConnectedLineName: e2e
+DestLanguage: en
+DestAccountCode: 
+DestContext: sim-agent
+DestExten: s
+DestPriority: 1
+DestUniqueid: 1792219479.34
+DestLinkedid: 1792219477.32
+DialStatus: ANSWER
+
+Event: MusicOnHoldStop
+Privilege: call,all
+Timestamp: 1792219480.329361
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219480.329394
+Device: Local/1001@sim-agent
+State: INUSE
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219480.329547
+Device: Queue:support
+State: NOT_INUSE
+
+Event: QueueCallerLeave
+Privilege: agent,all
+Timestamp: 1792219480.329551
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+Queue: support
+Position: 1
+Count: 0
+
+Event: AgentConnect
+Privilege: agent,all
+Timestamp: 1792219480.329605
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+DestChannel: Local/1001@sim-agent-00000011;1
+DestChannelState: 6
+DestChannelStateDesc: Up
+DestCallerIDNum: 01097340001
+DestCallerIDName: e2e
+DestConnectedLineNum: 01097340001
+DestConnectedLineName: e2e
+DestLanguage: en
+DestAccountCode: 
+DestContext: sim-agent
+DestExten: s
+DestPriority: 1
+DestUniqueid: 1792219479.34
+DestLinkedid: 1792219477.32
+Queue: support
+Interface: Local/1001@sim-agent
+MemberName: SIM-1001
+HoldTime: 1
+RingTime: 1
+
+Event: BridgeCreate
+Privilege: call,all
+Timestamp: 1792219480.329673
+BridgeUniqueid: a60ccc26-1e30-4c37-9e83-bb9b445ac8e6
+BridgeType: basic
+BridgeTechnology: simple_bridge
+BridgeCreator: <unknown>
+BridgeName: <unknown>
+BridgeNumChannels: 0
+BridgeVideoSourceMode: none
+
+Event: BridgeEnter
+Privilege: call,all
+Timestamp: 1792219480.329861
+BridgeUniqueid: a60ccc26-1e30-4c37-9e83-bb9b445ac8e6
+BridgeType: basic
+BridgeTechnology: simple_bridge
+BridgeCreator: <unknown>
+BridgeName: <unknown>
+BridgeNumChannels: 1
+BridgeVideoSourceMode: none
+Channel: Local/1001@sim-agent-00000011;1
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: s
+Priority: 1
+Uniqueid: 1792219479.34
+Linkedid: 1792219477.32
+
+Event: BridgeEnter
+Privilege: call,all
+Timestamp: 1792219480.329892
+BridgeUniqueid: a60ccc26-1e30-4c37-9e83-bb9b445ac8e6
+BridgeType: basic
+BridgeTechnology: simple_bridge
+BridgeCreator: <unknown>
+BridgeName: <unknown>
+BridgeNumChannels: 2
+BridgeVideoSourceMode: none
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219480.835363
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 7
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+Extension: 1001
+Application: NoOp
+AppData: SIM 상담원 1001 통화 20초
+
+Event: Newexten
+Privilege: dialplan,all
+Timestamp: 1792219480.835376
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 8
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+Extension: 1001
+Application: Wait
+AppData: 20
+
+Event: HangupRequest
+Privilege: call,all
+Timestamp: 1792219483.419843
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+Cause: 0
+
+Event: Hangup
+Privilege: call,all
+Timestamp: 1792219483.419893
+Channel: Local/customer@sim-00000010;1
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim
+Exten: customer
+Priority: 1
+Uniqueid: 1792219477.32
+Linkedid: 1792219477.32
+Cause: 0
+Cause-txt: Unknown
+
+Event: Cdr
+Privilege: cdr,all
+Timestamp: 1792219483.419980
+AccountCode: 
+Source: 01097340001
+Destination: customer
+DestinationContext: sim
+CallerID: "e2e" <01097340001>
+Channel: Local/customer@sim-00000010;1
+DestinationChannel: 
+LastApplication: Wait
+LastData: 6
+StartTime: 2026-10-17 15:44:37
+AnswerTime: 2026-10-17 15:44:37
+EndTime: 2026-10-17 15:44:43
+Duration: 6
+BillableSeconds: 6
+Disposition: ANSWERED
+AMAFlags: DOCUMENTATION
+UniqueID: 1792219477.32
+UserField: 
+
+Event: BridgeLeave
+Privilege: call,all
+Timestamp: 1792219483.420338
+BridgeUniqueid: a60ccc26-1e30-4c37-9e83-bb9b445ac8e6
+BridgeType: basic
+BridgeTechnology: simple_bridge
+BridgeCreator: <unknown>
+BridgeName: <unknown>
+BridgeNumChannels: 1
+BridgeVideoSourceMode: none
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+
+Event: SoftHangupRequest
+Privilege: call,all
+Timestamp: 1792219483.420360
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+Cause: 16
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219483.420362
+Device: Local/customer@sim
+State: NOT_INUSE
+
+Event: BridgeLeave
+Privilege: call,all
+Timestamp: 1792219483.420365
+BridgeUniqueid: a60ccc26-1e30-4c37-9e83-bb9b445ac8e6
+BridgeType: basic
+BridgeTechnology: simple_bridge
+BridgeCreator: <unknown>
+BridgeName: <unknown>
+BridgeNumChannels: 0
+BridgeVideoSourceMode: none
+Channel: Local/1001@sim-agent-00000011;1
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: s
+Priority: 1
+Uniqueid: 1792219479.34
+Linkedid: 1792219477.32
+
+Event: HangupRequest
+Privilege: call,all
+Timestamp: 1792219483.420369
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 8
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+Cause: 16
+
+Event: Hangup
+Privilege: call,all
+Timestamp: 1792219483.420376
+Channel: Local/1001@sim-agent-00000011;1
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: s
+Priority: 1
+Uniqueid: 1792219479.34
+Linkedid: 1792219477.32
+Cause: 16
+Cause-txt: Normal Clearing
+
+Event: BridgeDestroy
+Privilege: call,all
+Timestamp: 1792219483.420379
+BridgeUniqueid: a60ccc26-1e30-4c37-9e83-bb9b445ac8e6
+BridgeType: basic
+BridgeTechnology: simple_bridge
+BridgeCreator: <unknown>
+BridgeName: <unknown>
+BridgeNumChannels: 0
+BridgeVideoSourceMode: none
+
+Event: SoftHangupRequest
+Privilege: call,all
+Timestamp: 1792219483.420481
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 8
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+Cause: 16
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219483.420500
+Device: Local/1001@sim-agent
+State: NOT_INUSE
+
+Event: Hangup
+Privilege: call,all
+Timestamp: 1792219483.420508
+Channel: Local/1001@sim-agent-00000011;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: sim-agent
+Exten: 1001
+Priority: 8
+Uniqueid: 1792219479.35
+Linkedid: 1792219477.32
+Cause: 16
+Cause-txt: Normal Clearing
+
+Event: QueueMemberStatus
+Privilege: agent,all
+Timestamp: 1792219483.420538
+Queue: support
+MemberName: SIM-1001
+Interface: Local/1001@sim-agent
+StateInterface: Local/1001@sim-agent
+Membership: dynamic
+Penalty: 0
+CallsTaken: 1
+LastCall: 1792219483
+LastPause: 0
+LoginTime: 1792219477
+InCall: 0
+Status: 1
+Paused: 0
+PausedReason: 
+Ringinuse: 0
+Wrapuptime: 0
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219483.420543
+Device: Queue:support_avail
+State: NOT_INUSE
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219483.420579
+Device: Local/1001@sim-agent
+State: NOT_INUSE
+
+Event: AgentComplete
+Privilege: agent,all
+Timestamp: 1792219483.421100
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+DestChannel: Local/1001@sim-agent-00000011;1
+DestChannelState: 6
+DestChannelStateDesc: Up
+DestCallerIDNum: 01097340001
+DestCallerIDName: e2e
+DestConnectedLineNum: 01097340001
+DestConnectedLineName: e2e
+DestLanguage: en
+DestAccountCode: 
+DestContext: sim-agent
+DestExten: s
+DestPriority: 1
+DestUniqueid: 1792219479.34
+DestLinkedid: 1792219477.32
+Queue: support
+Interface: Local/1001@sim-agent
+MemberName: SIM-1001
+HoldTime: 1
+TalkTime: 3
+Reason: caller
+
+Event: Hangup
+Privilege: call,all
+Timestamp: 1792219483.421108
+Channel: Local/customer@sim-00000010;2
+ChannelState: 6
+ChannelStateDesc: Up
+CallerIDNum: 01097340001
+CallerIDName: e2e
+ConnectedLineNum: 01097340001
+ConnectedLineName: e2e
+Language: en
+AccountCode: 
+Context: inbound
+Exten: s
+Priority: 4
+Uniqueid: 1792219477.33
+Linkedid: 1792219477.32
+Cause: 16
+Cause-txt: Normal Clearing
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219483.421177
+Device: Local/customer@sim
+State: NOT_INUSE
+
+Response: Success
+ActionID: amicli-host-77732-12
+EventList: start
+Message: Channels will follow
+
+Event: CoreShowChannelsComplete
+ActionID: amicli-host-77732-12
+EventList: Complete
+ListItems: 0
+
+Event: Cdr
+Privilege: cdr,all
+Timestamp: 1792219483.421936
+AccountCode: 
+Source: 01097340001
+Destination: 1001
+DestinationContext: sim-agent
+CallerID: "e2e" <01097340001>
+Channel: Local/1001@sim-agent-00000011;2
+DestinationChannel: 
+LastApplication: Wait
+LastData: 20
+StartTime: 2026-10-17 15:44:39
+AnswerTime: 2026-10-17 15:44:40
+EndTime: 2026-10-17 15:44:43
+Duration: 4
+BillableSeconds: 3
+Disposition: ANSWERED
+AMAFlags: DOCUMENTATION
+UniqueID: 1792219479.35
+UserField: 
+
+Response: Error
+ActionID: amicli-host-77732-13
+Message: Unable to remove interface: Not there
+
+Event: Cdr
+Privilege: cdr,all
+Timestamp: 1792219483.422533
+AccountCode: 
+Source: 01097340001
+Destination: s
+DestinationContext: inbound
+CallerID: "e2e" <01097340001>
+Channel: Local/customer@sim-00000010;2
+DestinationChannel: Local/1001@sim-agent-00000011;1
+LastApplication: Queue
+LastData: support,t,,,120
+StartTime: 2026-10-17 15:44:37
+AnswerTime: 2026-10-17 15:44:37
+EndTime: 2026-10-17 15:44:43
+Duration: 6
+BillableSeconds: 6
+Disposition: ANSWERED
+AMAFlags: DOCUMENTATION
+UniqueID: 1792219477.33
+UserField: 
+
+Response: Error
+ActionID: amicli-host-77732-14
+Message: Unable to remove interface: Not there
+
+Response: Success
+ActionID: amicli-host-77732-15
+Message: Removed interface from queue
+
+Event: QueueMemberRemoved
+Privilege: agent,all
+Timestamp: 1792219483.423193
+Queue: support
+MemberName: SIM-1001
+Interface: Local/1001@sim-agent
+StateInterface: Local/1001@sim-agent
+Membership: dynamic
+Penalty: 0
+CallsTaken: 1
+LastCall: 1792219483
+LastPause: 0
+LoginTime: 1792219477
+InCall: 0
+Status: 1
+Paused: 0
+PausedReason: 
+Ringinuse: 0
+Wrapuptime: 0
+
+Event: DeviceStateChange
+Privilege: call,all
+Timestamp: 1792219483.423198
+Device: Queue:support_avail
+State: INUSE
+
+Response: Error
+ActionID: amicli-host-77732-16
+Message: Unable to remove interface: Not there
+
+Response: Error
+ActionID: amicli-host-77732-17
+Message: Unable to remove interface: Not there
+
+Response: Goodbye
+ActionID: amicli-host-77732-18
+Message: Thanks for all the fish.
+

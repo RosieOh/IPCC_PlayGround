@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<!--
+  보류하는 상담원 전화기(PJSIP/9002). uas-agent.xml과 같지만 통화 중에 보류했다가 해제한다.
+
+    INVITE → 180 → 200 → ACK → 1초 → re-INVITE(a=sendonly, 보류) → 200 → ACK
+    → 2초 → re-INVITE(a=sendrecv, 해제) → 200 → ACK → 1초 → 상담원이 BYE → 200
+
+  소프트폰의 '보류' 버튼도 이렇게 re-INVITE로 미디어 방향을 바꾼다. Asterisk는 이걸 Hold/Unhold 이벤트로 알린다.
+-->
+<scenario name="uas-agent-hold">
+
+  <recv request="INVITE" crlf="true">
+    <action>
+      <ereg regexp="sip:[^>;]+" search_in="hdr" header="Contact:" check_it="true" assign_to="remote_contact"/>
+      <ereg regexp=".*" search_in="hdr" header="From:" check_it="true" assign_to="remote_from"/>
+      <ereg regexp=".*" search_in="hdr" header="To:" check_it="true" assign_to="local_to"/>
+    </action>
+  </recv>
+
+  <send>
+    <![CDATA[
+
+      SIP/2.0 180 Ringing
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[pid]SIPpTag01[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: <sip:9002@[local_ip]:[local_port]>
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <pause milliseconds="1000"/>
+
+  <send retrans="500">
+    <![CDATA[
+
+      SIP/2.0 200 OK
+      [last_Via:]
+      [last_From:]
+      [last_To:];tag=[pid]SIPpTag01[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      Contact: <sip:9002@[local_ip]:[local_port]>
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=sipp 1 1 IN IP[local_ip_type] [local_ip]
+      s=-
+      c=IN IP[media_ip_type] [media_ip]
+      t=0 0
+      m=audio [media_port] RTP/AVP 0 101
+      a=rtpmap:0 PCMU/8000
+      a=rtpmap:101 telephone-event/8000
+      a=fmtp:101 0-16
+      a=sendrecv
+
+    ]]>
+  </send>
+
+  <recv request="ACK" crlf="true"/>
+
+  <pause milliseconds="1000"/>
+
+  <!-- 보류: 나는 보내기만 하겠다(sendonly) → 상대는 받지 못하니 Asterisk가 상대에게 대기음을 튼다 -->
+  <send retrans="500">
+    <![CDATA[
+
+      INVITE [$remote_contact] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: [$local_to];tag=[pid]SIPpTag01[call_number]
+      To: [$remote_from]
+      Call-ID: [call_id]
+      CSeq: 2 INVITE
+      Contact: <sip:9002@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=sipp 1 2 IN IP[local_ip_type] [local_ip]
+      s=-
+      c=IN IP[media_ip_type] [media_ip]
+      t=0 0
+      m=audio [media_port] RTP/AVP 0 101
+      a=rtpmap:0 PCMU/8000
+      a=rtpmap:101 telephone-event/8000
+      a=sendonly
+
+    ]]>
+  </send>
+
+  <recv response="100" optional="true"/>
+  <recv response="200" crlf="true"/>
+
+  <send>
+    <![CDATA[
+
+      ACK [$remote_contact] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: [$local_to];tag=[pid]SIPpTag01[call_number]
+      To: [$remote_from]
+      Call-ID: [call_id]
+      CSeq: 2 ACK
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <pause milliseconds="2000"/>
+
+  <!-- 해제: 다시 주고받기(sendrecv) -->
+  <send retrans="500">
+    <![CDATA[
+
+      INVITE [$remote_contact] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: [$local_to];tag=[pid]SIPpTag01[call_number]
+      To: [$remote_from]
+      Call-ID: [call_id]
+      CSeq: 3 INVITE
+      Contact: <sip:9002@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Content-Type: application/sdp
+      Content-Length: [len]
+
+      v=0
+      o=sipp 1 3 IN IP[local_ip_type] [local_ip]
+      s=-
+      c=IN IP[media_ip_type] [media_ip]
+      t=0 0
+      m=audio [media_port] RTP/AVP 0 101
+      a=rtpmap:0 PCMU/8000
+      a=rtpmap:101 telephone-event/8000
+      a=sendrecv
+
+    ]]>
+  </send>
+
+  <recv response="100" optional="true"/>
+  <recv response="200" crlf="true"/>
+
+  <send>
+    <![CDATA[
+
+      ACK [$remote_contact] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: [$local_to];tag=[pid]SIPpTag01[call_number]
+      To: [$remote_from]
+      Call-ID: [call_id]
+      CSeq: 3 ACK
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <pause milliseconds="1000"/>
+
+  <send retrans="500">
+    <![CDATA[
+
+      BYE [$remote_contact] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
+      From: [$local_to];tag=[pid]SIPpTag01[call_number]
+      To: [$remote_from]
+      Call-ID: [call_id]
+      CSeq: 4 BYE
+      Contact: <sip:9002@[local_ip]:[local_port]>
+      Max-Forwards: 70
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  <recv response="200" crlf="true"/>
+
+</scenario>

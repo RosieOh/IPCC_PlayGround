@@ -1,0 +1,13 @@
+{"t":"1792216830.919064","kind":"agent","id":"PJSIP/9002","name":"상담원9002","from":"LoggedOut","to":"Ready","reason":"","call":""}
+{"t":"1792216832.121796","kind":"call","id":"1792216832.0","from":"","to":"Entered","queue":"","customer":"9001","agent":""}
+{"t":"1792216834.031963","kind":"call","id":"1792216832.0","from":"Entered","to":"Queued","queue":"support","customer":"9001","agent":""}
+{"t":"1792216834.034816","kind":"agent","id":"PJSIP/9002","name":"상담원9002","from":"Ready","to":"Ringing","reason":"","call":"1792216832.0"}
+{"t":"1792216834.034816","kind":"call","id":"1792216832.0","from":"Queued","to":"Alerting","queue":"support","customer":"9001","agent":""}
+{"t":"1792216835.040385","kind":"agent","id":"PJSIP/9002","name":"상담원9002","from":"Ringing","to":"Talking","reason":"","call":"1792216832.0"}
+{"t":"1792216835.040385","kind":"call","id":"1792216832.0","from":"Alerting","to":"Connected","queue":"support","customer":"9001","agent":"PJSIP/9002"}
+{"t":"1792216837.045490","kind":"agent","id":"PJSIP/9002","name":"상담원9002","from":"Talking","to":"ACW","reason":"후처리","call":"1792216832.0"}
+{"t":"1792216837.045490","kind":"action","action":"QueuePause","iface":"PJSIP/9002","paused":true,"reason":"후처리"}
+{"t":"1792216837.045522","kind":"call","id":"1792216832.0","from":"Connected","to":"Ended","queue":"support","customer":"9001","agent":"PJSIP/9002"}
+{"t":"1792216837.045522","kind":"call_end","id":"1792216832.0","outcome":"completed:agent","queue":"support","customer":"9001","agent":"PJSIP/9002","wait_ms":1008,"talk_ms":2005}
+{"t":"1792216837.075350","kind":"agent","id":"PJSIP/9002","name":"상담원9002","from":"ACW","to":"LoggedOut","reason":"","call":""}
+{"kind":"snapshot","agents":[{"id":"PJSIP/9002","name":"상담원9002","state":"LoggedOut","reason":"","call":""}],"calls":[]}

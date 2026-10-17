@@ -8,7 +8,7 @@
 | Go 1.24 이상 | 엔진, amicli | 필수 |
 | Linphone 또는 Zoiper | 소프트폰 (사람이 직접 통화) | Stage 0 과제용 |
 | Wireshark | 패킷 분석 | 선택 |
-| Rust (rustup) | Stage 2 레거시 구현 | Stage 2부터 |
+| (Rust는 설치하지 않는다) | Stage 2 레거시 구현 | `make rust-test`, `make diff-test`가 Docker 이미지(`rust:1.98.1`)로 돌린다 (D-017) |
 
 ## 2. 처음 실행
 

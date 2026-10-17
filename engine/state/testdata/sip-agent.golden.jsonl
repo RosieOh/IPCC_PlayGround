@@ -1,0 +1,13 @@
+{"t":"1792219528.176932","kind":"agent","id":"PJSIP/9002","name":"SIPP-9002","from":"LoggedOut","to":"Ready","reason":"","call":""}
+{"t":"1792219528.381169","kind":"call","id":"1792219528.54","from":"","to":"Entered","queue":"","customer":"9001","agent":""}
+{"t":"1792219530.287797","kind":"call","id":"1792219528.54","from":"Entered","to":"Queued","queue":"support","customer":"9001","agent":""}
+{"t":"1792219530.289409","kind":"agent","id":"PJSIP/9002","name":"SIPP-9002","from":"Ready","to":"Ringing","reason":"","call":"1792219528.54"}
+{"t":"1792219530.289409","kind":"call","id":"1792219528.54","from":"Queued","to":"Alerting","queue":"support","customer":"9001","agent":""}
+{"t":"1792219531.292754","kind":"agent","id":"PJSIP/9002","name":"SIPP-9002","from":"Ringing","to":"Talking","reason":"","call":"1792219528.54"}
+{"t":"1792219531.292754","kind":"call","id":"1792219528.54","from":"Alerting","to":"Connected","queue":"support","customer":"9001","agent":"PJSIP/9002"}
+{"t":"1792219533.297528","kind":"agent","id":"PJSIP/9002","name":"SIPP-9002","from":"Talking","to":"ACW","reason":"후처리","call":"1792219528.54"}
+{"t":"1792219533.297528","kind":"action","action":"QueuePause","iface":"PJSIP/9002","paused":true,"reason":"후처리"}
+{"t":"1792219533.298229","kind":"call","id":"1792219528.54","from":"Connected","to":"Ended","queue":"support","customer":"9001","agent":"PJSIP/9002"}
+{"t":"1792219533.298229","kind":"call_end","id":"1792219528.54","outcome":"completed:agent","queue":"support","customer":"9001","agent":"PJSIP/9002","wait_ms":1004,"talk_ms":2004}
+{"t":"1792219533.315935","kind":"agent","id":"PJSIP/9002","name":"SIPP-9002","from":"ACW","to":"LoggedOut","reason":"","call":""}
+{"kind":"snapshot","agents":[{"id":"PJSIP/9002","name":"SIPP-9002","state":"LoggedOut","reason":"","call":""}],"calls":[]}
