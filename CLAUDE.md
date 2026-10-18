@@ -13,6 +13,7 @@
 - `web/` — 실시간 현황판 (Next.js 16, React 19, Tailwind 4). 라우트 핸들러가 엔진 HTTP API의 게이트웨이다 (docs/11, D-020).
   `web/AGENTS.md`는 `next dev`가 만든다: 이 Next.js 버전의 API는 `web/node_modules/next/dist/docs/`에서 확인한다
 - `tests/sipp/` — SIPp 시나리오 (컨테이너의 `/sipp`), `tests/state/replay-all.sh` — 두 구현 공용 재생 스크립트
+- `script/` — 사람이 바로 실행하는 스크립트 (켜기·끄기·상태·데모·로그·검사). macOS bash 3.2에서 돌아야 한다. 고치면 shellcheck
 - `docs/` — 설계 문서. 결정을 바꾸면 `docs/09-decisions.md`에 항목을 추가한다
 
 ## 명령 (저장소 루트에서)
@@ -31,6 +32,8 @@
 | 빌드 | `make build` → `bin/amicli`, `bin/state`(`replay [--cmds F] 녹화…`), `bin/engine`(실시간 엔진, 명령은 stdin) |
 | 실시간 현황판 | `make engine`(엔진 + 화면용 API 127.0.0.1:8090) → `make web`(http://localhost:3000) |
 | 화면 검사 | `make web-check` (npm ci + lint + 타입 검사 + 빌드, CI의 web 작업) |
+| 한 번에 켜기 / 끄기 / 상태 | `script/start.sh [--demo]` / `script/stop.sh [--all]` / `script/status.sh` (PID·로그는 `.run/`) |
+| 데모 콜 / 로그 / 전체 검사 | `script/demo.sh [-n N] [--loop]` / `script/logs.sh engine\|web\|asterisk` / `script/check.sh [--quick]` |
 | 가짜 상담원 / 가짜 콜 | `make sim-agents`, `make sim-call n=3`, `make sim-abandon` |
 | SIP 자동 테스트 | `make sip-register`, `make sip-echo`, `make sip-queue`, `make sip-agent-call` |
 | 음성(RTP) 경로 검사 | `make rtp-check` — Mac에서 602 에코로 RTP 왕복을 센다 |

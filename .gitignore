@@ -13,3 +13,6 @@
 
 *.pcap
 .DS_Store
+
+# script/*.sh가 켠 프로세스의 PID와 로그
+/.run/
