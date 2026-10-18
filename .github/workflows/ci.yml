@@ -1,6 +1,7 @@
 # 푸시와 PR마다 로컬과 같은 make 명령으로 검증한다.
 #   go   — make test (gofmt, vet, race, 상태머신 골든 테스트) + golangci-lint
 #   rust — Rust 레거시 단위 테스트 + 차분 테스트 (모든 녹화에서 Rust와 Go의 출력이 바이트 단위로 같은지)
+#   web  — 실시간 현황판(Next.js): lint, 타입 검사, 빌드
 #   e2e  — 실제 Asterisk 컨테이너로 콜 흐름 전체 (make e2e, 상태머신 엔진, 재시작 후 재접속·재동기화 포함)
 name: CI
 
@@ -61,6 +62,22 @@ jobs:
 
       - name: 차분 테스트 — 모든 녹화에서 Rust 출력 = Go 출력 = 기대 출력
         run: make diff-test
+
+  web:
+    name: 화면 (Next.js)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: npm ci · lint · 타입 검사 · 빌드
+        run: make web-check
 
   e2e:
     name: E2E (실제 Asterisk)

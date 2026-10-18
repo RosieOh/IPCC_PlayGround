@@ -10,7 +10,7 @@
 //	logout Local/1001@sim-agent
 //	snapshot
 //
-// 상담원 툴바용 명령 API(HTTP·WebSocket)는 Stage 3에서 만든다.
+// -http 주소(기본 127.0.0.1:8090)에는 화면용 API를 연다 (live.Handler: 상태, SSE, 명령). 화면은 web/ (Next.js).
 package main
 
 import (
@@ -20,6 +20,8 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -39,6 +41,7 @@ func main() {
 	acw := flag.Duration("acw", 10*time.Second, "후처리 시간")
 	maxMissed := flag.Int("max-missed", 2, "무응답이 이만큼 연속되면 자동 이석 (0이면 끔)")
 	debug := flag.Bool("debug", false, "디버그 로그 (보내는 액션까지 표시)")
+	httpAddr := flag.String("http", envOr("ENGINE_HTTP", "127.0.0.1:8090"), "화면용 HTTP API 주소 (빈 값이면 열지 않는다)")
 	flag.Parse()
 
 	level := slog.LevelInfo
@@ -67,9 +70,31 @@ func main() {
 
 	go func() { _ = client.Run(ctx) }()
 	go readCommands(ctx, r, log)
+	if *httpAddr != "" {
+		go serveHTTP(ctx, *httpAddr, r.Handler(), log)
+	}
 	if err := r.Run(ctx); err != nil && !errors.Is(err, context.Canceled) {
 		log.Error("엔진 종료", "err", err)
 		os.Exit(1)
+	}
+}
+
+// serveHTTP는 화면용 API를 연다. SSE 연결이 오래 살아 있으므로 WriteTimeout을 두지 않고,
+// 요청 컨텍스트를 ctx에서 파생시켜 엔진이 끝날 때 SSE 핸들러도 같이 끝나게 한다.
+func serveHTTP(ctx context.Context, addr string, h http.Handler, log *slog.Logger) {
+	srv := &http.Server{
+		Addr: addr, Handler: h, ReadHeaderTimeout: 5 * time.Second,
+		BaseContext: func(net.Listener) context.Context { return ctx },
+	}
+	go func() {
+		<-ctx.Done()
+		shutdown, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(shutdown)
+	}()
+	log.Info("화면용 API", "addr", "http://"+addr)
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Error("화면용 API를 열 수 없음", "addr", addr, "err", err)
 	}
 }
 

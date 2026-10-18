@@ -10,6 +10,8 @@
   `cmd/amicli/`(학습용 CLI), `cmd/state/`(녹화 재생), `cmd/engine/`(실시간 엔진), `testdata/`(Stage 1 녹화)
 - `engine/state/testdata/` — 시나리오 녹화(`*.ami`), 상담원 명령(`*.cmds`), 기대 출력(`*.golden.jsonl`, Rust가 만든다)
 - `legacy-rust/` — 상태머신의 Rust '레거시' 구현 (기준 구현, D-016). Docker로만 빌드한다
+- `web/` — 실시간 현황판 (Next.js 16, React 19, Tailwind 4). 라우트 핸들러가 엔진 HTTP API의 게이트웨이다 (docs/11, D-020).
+  `web/AGENTS.md`는 `next dev`가 만든다: 이 Next.js 버전의 API는 `web/node_modules/next/dist/docs/`에서 확인한다
 - `tests/sipp/` — SIPp 시나리오 (컨테이너의 `/sipp`), `tests/state/replay-all.sh` — 두 구현 공용 재생 스크립트
 - `docs/` — 설계 문서. 결정을 바꾸면 `docs/09-decisions.md`에 항목을 추가한다
 
@@ -27,6 +29,8 @@
 | 상태머신: 기대 출력 다시 만들기 | `make golden` (Rust로만. Go에는 -update가 없다) |
 | 상태머신: 시나리오 다시 녹화 | `make scenarios` 또는 `make scenarios only=hold,three-way` |
 | 빌드 | `make build` → `bin/amicli`, `bin/state`(`replay [--cmds F] 녹화…`), `bin/engine`(실시간 엔진, 명령은 stdin) |
+| 실시간 현황판 | `make engine`(엔진 + 화면용 API 127.0.0.1:8090) → `make web`(http://localhost:3000) |
+| 화면 검사 | `make web-check` (npm ci + lint + 타입 검사 + 빌드, CI의 web 작업) |
 | 가짜 상담원 / 가짜 콜 | `make sim-agents`, `make sim-call n=3`, `make sim-abandon` |
 | SIP 자동 테스트 | `make sip-register`, `make sip-echo`, `make sip-queue`, `make sip-agent-call` |
 | 음성(RTP) 경로 검사 | `make rtp-check` — Mac에서 602 에코로 RTP 왕복을 센다 |
@@ -34,6 +38,7 @@
 | 이벤트 사전 다시 만들기 | `make event-dict` (testdata 녹화를 바꾸면 실행. docs/10은 손으로 고치지 않는다) |
 
 동작을 확인할 때는 사람에게 묻기 전에 직접 돌려 본다. 기본은 `make test && make lint && make diff-test && make e2e`(CI와 같다).
+`web/`을 바꿨으면 `make web-check`도 돌린다. e2e 전에는 띄워 둔 `bin/engine`을 내린다 (엔진 두 개가 같은 큐 멤버를 움직인다).
 이벤트를 자세히 보려면 `bin/amicli watch -record <임시 디렉터리>`를 백그라운드로 띄우고
 `make sim-agents` + `make sim-call` → 녹화를 `bin/amicli replay`로 확인한다.
 변경은 브랜치 → PR → CI 통과 순서로 올린다 (D-013).

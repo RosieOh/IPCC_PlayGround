@@ -14,6 +14,7 @@ IPCC Playground의 설계 문서다. "무엇을, 왜 이렇게 만들었는지"�
 | [07-rust-to-go.md](07-rust-to-go.md) | Rust→Go 포팅 가이드, 차분 테스트, 코딩 에이전트 활용, 실제 포팅 메모(10절) | Stage 2 |
 | [08-runbook.md](08-runbook.md) | 실행, 소프트폰 연결, 디버깅 명령, 문제 해결 | 막힐 때 |
 | [09-decisions.md](09-decisions.md) | 설계 결정 기록 (왜 이렇게 했나) | 무언가를 바꾸고 싶을 때 |
+| [11-board.md](11-board.md) | 실시간 현황판(Next.js): 실행, 데이터 흐름, 엔진 HTTP API(SSE·명령), 화면 구성 | Stage 3 |
 | [10-event-dictionary.md](10-event-dictionary.md) | AMI 이벤트 사전 — 녹화에서 실제로 본 이벤트·필드와 엔진 입장의 의미 (자동 생성) | 이벤트 이름이 나올 때 |
 
 ## 문서 규칙
