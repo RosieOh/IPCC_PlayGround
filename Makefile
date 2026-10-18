@@ -37,7 +37,7 @@ RUST_REPLAY_ALL := cargo build --release -q && /repo/tests/state/replay-all.sh /
 
 .PHONY: help up up-lan down restart ps logs cli rx reload sngrep pcap sh \
 	build watch agent-login agent-logout sim-agents sim-logout sim-call sim-abandon \
-	test lint e2e rtp-check event-dict scenarios rust-test golden diff-test \
+	test lint e2e rtp-check event-dict scenarios rust-test golden diff-test engine web web-check \
 	sip-register sip-echo sip-queue sip-agent-call clean clean-data
 
 help: ## 이 목록
@@ -151,6 +151,16 @@ diff-test: ## 차분 테스트: 모든 녹화에서 Rust 레거시와 Go 포팅�
 	   cmp -s "$$f" "$(STATE_DATA)/$${f##*/}" || { echo "기대 출력이 Rust 출력과 다름: $${f##*/} (make golden)"; exit 1; }; \
 	 done && \
 	 echo "Rust = Go: $$(ls "$$tmp"/rust | wc -l | tr -d ' ')개 출력이 모두 같음"
+
+## 화면: 실시간 현황판 (엔진 HTTP API → Next.js 게이트웨이 → 브라우저)
+engine: build ## 상태머신 엔진 실행: AMI 연결 + 화면용 API(http://127.0.0.1:8090). 명령은 stdin (login Local/1001@sim-agent 상담원1)
+	bin/engine
+
+web: ## 실시간 현황판 개발 서버 → http://localhost:3000 (먼저 make up, make engine)
+	cd web && { [ -d node_modules ] || npm ci; } && NEXT_TELEMETRY_DISABLED=1 npm run dev
+
+web-check: ## 화면 검사: npm ci + lint + 타입 검사 + 빌드 (CI와 같다)
+	cd web && npm ci && npm run lint && npm run typecheck && NEXT_TELEMETRY_DISABLED=1 npm run build
 
 ## SIP 자동 테스트 (SIPp, 컨테이너 안에서 실행)
 sip-register: ## 9001로 등록 (REGISTER → 401 → 인증 → 200)

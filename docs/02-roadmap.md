@@ -15,7 +15,7 @@
 | 0 | 전화부터 걸어보기 (Asterisk, SIP) | 3~5일 | 환경 ✅ / 자동화·해설 ✅ / 소프트폰·Wireshark는 사람 몫 |
 | 1 | Go AMI 클라이언트 | 1~2주 | 레퍼런스 ✅ / 과제 4개 구현 ✅ / 이벤트 사전 ✅ |
 | 2 | 상태머신: 콜·상담원·큐 (Rust→Go 리허설) | 2~3주 | Rust 레거시 ✅ / Go 포팅 ✅ / 차분 테스트 ✅ / 실시간 엔진 ✅ ([06](06-state-model.md), [07](07-rust-to-go.md)) |
-| 3 | 실시간 모니터링 (Node.js 게이트웨이, 화면) | 1~2주 | 계획 |
+| 3 | 실시간 모니터링 (Node.js 게이트웨이, 화면) | 1~2주 | 첫 화면 ✅ (Next.js 현황판, [11](11-board.md)) / 나머지 계획 |
 | 4 | MySQL 이력·통계 | 1~2주 | 계획 |
 | 5 | ARS (Go FastAGI) | 1주 | 계획 |
 | 6 | 고객사 연동, 장애 대응 | 1~2주 | 계획 |
@@ -142,11 +142,17 @@
 
 **목표**: 상태를 화면으로 보여 준다. Node.js가 여기서 등장한다.
 
+**제공된 것** ✅ (요청으로 첫 화면만 먼저 만들었다 → [11-board.md](11-board.md))
+- `web/` — Next.js 16 실시간 현황판 한 화면: 큐 현황, 상담원 카드(버튼으로 명령), 진행 중·최근 종료 콜, 이벤트 로그. 라이트·다크
+- 엔진 HTTP API (`bin/engine -http`): SSE(접속 시 전체 상태 → 이후 바뀐 줄), 상담원 명령. Next.js 라우트 핸들러가 게이트웨이
+- `make engine`, `make web`, `make web-check`(CI의 web 작업)
+
 **직접 해볼 것**
-- [ ] `docker-compose.yml`에 redis 추가. 엔진이 상태 변화를 Redis pub/sub로 발행
-- [ ] `gateway/` (Node.js, Fastify 또는 NestJS): WebSocket — 접속하면 전체 스냅샷, 이후에는 바뀐 부분만
+- [ ] `docker-compose.yml`에 redis 추가. 엔진이 상태 변화를 Redis pub/sub로 발행 (게이트웨이를 여러 대 둘 때)
+- [x] 게이트웨이 — 접속하면 전체 스냅샷, 이후에는 바뀐 부분만 → 첫 버전은 Next.js 라우트 핸들러 + SSE (D-020).
+  WebSocket·Fastify/NestJS 게이트웨이는 화면 → 서버 요청이 많아질 때
 - [ ] 상담원 툴바: 대기/이석/후처리, 걸기, 전환, 보류, 당겨받기 → 엔진 명령 API
-- [ ] 슈퍼바이저 현황판: 큐별 대기 수·최장 대기시간, 상담원별 상태·경과시간, 실시간 응대율
+- [x] 슈퍼바이저 현황판: 큐별 대기 수·최장 대기시간, 상담원별 상태·경과시간, 실시간 응대율 → `web/` (큐는 support 하나)
 - [ ] 감청 / 코칭(상담원에게만 들림) / 강제개입: `ChanSpy`를 `Originate`로 호출
 - [ ] (우대사항) 브라우저 WebRTC 소프트폰: JsSIP 또는 SIP.js + Asterisk WSS (`http.conf` TLS, PJSIP `webrtc=yes`)
 

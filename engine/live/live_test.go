@@ -1,9 +1,13 @@
 package live
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -208,4 +212,108 @@ func TestLoginAddsMemberPausedWithName(t *testing.T) {
 		t.Fatalf("QueueAdd = %v", m)
 	}
 	f.ok(m)
+}
+
+// 화면용 HTTP API: SSE는 전체 상태로 시작하고 이후 줄을 흘린다. 명령은 Asterisk 액션으로 이어진다.
+func TestHTTPEventsAndCommands(t *testing.T) {
+	r, f, lines := start(t)
+	f.booted()
+	m := f.expect("CoreShowChannels")
+	f.ok(m, "EventList", "start")
+	f.send("Event", "CoreShowChannelsComplete", "ActionID", m.ActionID(), "EventList", "Complete", "ListItems", "0")
+	m = f.expect("QueueStatus")
+	f.ok(m, "EventList", "start")
+	f.send("Event", "QueueMember", "ActionID", m.ActionID(), "Name", "SIM-1001", "Location", agent, "Paused", "0")
+	f.send("Event", "QueueStatusComplete", "ActionID", m.ActionID(), "EventList", "Complete", "ListItems", "1")
+	waitLine(t, lines, `"to":"Ready"`)
+	<-r.Synced()
+
+	srv := httptest.NewServer(r.Handler())
+	defer srv.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/api/events", nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/event-stream") {
+		t.Fatalf("Content-Type = %q", ct)
+	}
+	sse := bufio.NewReader(resp.Body)
+	next := func() (event, data string) { // 빈 줄까지 읽어 SSE 메시지 하나를 돌려준다 (주석·retry는 건너뜀)
+		t.Helper()
+		for {
+			l, err := sse.ReadString('\n')
+			if err != nil {
+				t.Fatalf("SSE 읽기: %v", err)
+			}
+			l = strings.TrimRight(l, "\n")
+			switch {
+			case strings.HasPrefix(l, "event: "):
+				event = strings.TrimPrefix(l, "event: ")
+			case strings.HasPrefix(l, "data: "):
+				data = strings.TrimPrefix(l, "data: ")
+			case l == "" && data != "":
+				return event, data
+			}
+		}
+	}
+
+	ev, data := next()
+	var st struct {
+		Kind      string `json:"kind"`
+		Queue     string `json:"queue"`
+		Connected bool   `json:"connected"`
+		Synced    bool   `json:"synced"`
+		Snapshot  struct {
+			Agents []struct{ ID, State string } `json:"agents"`
+		} `json:"snapshot"`
+		Since struct {
+			Agents map[string]string `json:"agents"`
+		} `json:"since"`
+		Recent []json.RawMessage `json:"recent"`
+	}
+	if err := json.Unmarshal([]byte(data), &st); err != nil {
+		t.Fatalf("상태 JSON: %v\n%s", err, data)
+	}
+	if ev != "state" || st.Kind != "state" || st.Queue != "support" || !st.Connected || !st.Synced ||
+		len(st.Snapshot.Agents) != 1 || st.Snapshot.Agents[0].State != "Ready" || st.Since.Agents[agent] == "" || len(st.Recent) == 0 {
+		t.Fatalf("첫 이벤트 = %s %s", ev, data)
+	}
+
+	// 명령: 대기 → 이석(식사). Asterisk에는 QueuePause, 화면에는 상태 변화 줄
+	body := strings.NewReader(`{"kind":"notready","iface":"` + agent + `","arg":"식사"}`)
+	pr, err := http.Post(srv.URL+"/api/commands", "application/json", body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pr.Body.Close()
+	if pr.StatusCode != http.StatusAccepted {
+		t.Fatalf("명령 응답 %d", pr.StatusCode)
+	}
+	m = f.expect("QueuePause")
+	if m.Get("Paused") != "true" || m.Get("Reason") != "식사" {
+		t.Fatalf("QueuePause = %v", m)
+	}
+	f.ok(m)
+	for {
+		_, data = next()
+		if strings.Contains(data, `"kind":"agent"`) {
+			break
+		}
+	}
+	if !strings.Contains(data, `"to":"NotReady"`) || !strings.Contains(data, `"reason":"식사"`) {
+		t.Fatalf("상태 변화 줄 = %s", data)
+	}
+
+	pr, err = http.Post(srv.URL+"/api/commands", "application/json", strings.NewReader(`{"kind":"dance","iface":"x"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pr.Body.Close()
+	if pr.StatusCode != http.StatusBadRequest {
+		t.Fatalf("모르는 명령 응답 %d, 기대 400", pr.StatusCode)
+	}
 }

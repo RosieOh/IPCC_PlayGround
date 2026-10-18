@@ -28,10 +28,10 @@ Go CTI 엔진 (engine/)
   state   콜/상담원/큐 상태머신 코어 (I/O 없음)          Stage 2 ✅  ← legacy-rust/ (Rust 레거시)와 차분 테스트
   live    상태머신 + AMI: 후처리 타이머, 액션, 재동기화   Stage 2 ✅
   ars     FastAGI 서버                                Stage 5
-        │ Redis pub/sub (Stage 3)          │ MySQL (Stage 4)
+        │ HTTP SSE (Stage 3, Redis는 나중에) │ MySQL (Stage 4)
         ▼                                  ▼
-Node.js 게이트웨이 (Stage 3)               콜 이력 · 상담원 상태 이력 · 15분 통계
-  WebSocket ──▶ 상담원 툴바 · 슈퍼바이저 현황판
+Next.js (web/, Stage 3 첫 화면 ✅)          콜 이력 · 상담원 상태 이력 · 15분 통계
+  라우트 핸들러(게이트웨이) ── SSE ──▶ 실시간 현황판 (엔진 HTTP :8090 직접, Redis는 나중에)
   REST/웹훅 ──▶ Mock CRM (고객사 연동, Stage 6)
 ```
 

@@ -5,8 +5,9 @@
 //	ami.Client.Run  접속·재접속·수신. 사이에 무제한 큐가 있어서 이 패키지가 늦어도 AMI 읽기 루프는 막히지 않는다
 //	Runner.Run      상태머신을 혼자 만지는 고루틴(actor). AMI 이벤트·스냅샷·명령·시계를 한 줄로 세워 차례로 넣는다
 //	 ├─ resync      FullyBooted를 받을 때마다 CoreShowChannels·QueueStatus를 보낸다. 결과는 이벤트 스트림으로 돌아온다
-//	 └─ execute     상태머신이 낸 액션(QueuePause·QueueAdd·QueueRemove)을 AMI로 보낸다.
-//	                응답을 기다리는 동안 actor가 멈추지 않게 따로 돈다
+//	 ├─ execute     상태머신이 낸 액션(QueuePause·QueueAdd·QueueRemove)을 AMI로 보낸다.
+//	 │              응답을 기다리는 동안 actor가 멈추지 않게 따로 돈다
+//	 └─ HTTP        화면용 API (http.go). 화면이 붙으면 actor가 전체 상태를 주고, 이후 출력 줄을 구독자에게 나눠 준다
 //
 // 스냅샷은 ami.Client.SendListInline으로 받는다. 목록이 실시간 이벤트와 '받은 순서 그대로' 섞여서 오므로
 // 녹화 재생과 같은 state.Grouper로 묶을 수 있고, 실시간과 재생의 처리 순서가 같아진다.
@@ -14,6 +15,7 @@ package live
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strconv"
 	"time"
@@ -50,6 +52,19 @@ type Runner struct {
 	snaps  chan chan string
 	acts   chan action
 	synced chan struct{} // 첫 QueueStatus 스냅샷을 반영하면 닫는다
+
+	// 화면 (view.go, http.go). board와 subs는 actor만 만진다
+	board   *board
+	subs    map[chan string]struct{}
+	views   chan viewReq
+	unsubs  chan chan string
+	stopped chan struct{} // Run이 끝나면 닫는다
+}
+
+// viewReq는 화면의 상태 요청이다. sub가 있으면 구독자로 등록하고 이후 출력 줄을 보낸다.
+type viewReq struct {
+	sub   chan string
+	reply chan string
 }
 
 // New는 Runner를 만든다. c.Run은 부르는 쪽이 따로 돌린다.
@@ -70,6 +85,8 @@ func New(c *ami.Client, cfg Config) *Runner {
 		c: c, cfg: cfg, core: state.New(cfg.Policy), log: cfg.Logger,
 		cmds: make(chan state.Command), snaps: make(chan chan string), acts: make(chan action, 1024),
 		synced: make(chan struct{}),
+		board:  newBoard(), subs: map[chan string]struct{}{},
+		views: make(chan viewReq), unsubs: make(chan chan string), stopped: make(chan struct{}),
 	}
 }
 
@@ -102,8 +119,40 @@ func (r *Runner) Snapshot(ctx context.Context) (string, error) {
 	}
 }
 
+// view는 지금 상태 전체(JSON)를 받는다. sub가 nil이 아니면 구독자로 등록한다:
+// 상태를 만드는 것과 등록이 actor 안에서 한 번에 일어나므로, 그 사이에 나온 줄을 빠뜨리거나 두 번 보내지 않는다.
+func (r *Runner) view(ctx context.Context, sub chan string) (string, error) {
+	req := viewReq{sub: sub, reply: make(chan string, 1)}
+	select {
+	case r.views <- req:
+	case <-r.stopped:
+		return "", errStopped
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+	select {
+	case s := <-req.reply:
+		return s, nil
+	case <-r.stopped:
+		return "", errStopped
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+}
+
+// unsubscribe는 구독을 끝낸다. 느려서 actor가 이미 끊은 구독이어도 된다.
+func (r *Runner) unsubscribe(sub chan string) {
+	select {
+	case r.unsubs <- sub:
+	case <-r.stopped:
+	}
+}
+
+var errStopped = errors.New("live: 엔진이 멈췄다")
+
 // Run은 ctx가 끝나거나 AMI 클라이언트가 멈출 때까지 상태머신을 돌린다.
 func (r *Runner) Run(ctx context.Context) error {
+	defer close(r.stopped)
 	go r.execute(ctx)
 	tick := time.NewTicker(r.cfg.Tick)
 	defer tick.Stop()
@@ -124,8 +173,10 @@ func (r *Runner) Run(ctx context.Context) error {
 				// 바로 하지 않고 FullyBooted를 기다린다: Asterisk는 모듈을 다 올리기 전에도 AMI 로그인을 받아서,
 				// 재시작 직후에는 QueueStatus가 "Invalid/unknown command"로 실패한다 (e2e에서 확인, docs/05 6절)
 				g.Reset()
+				r.setConn(true, false)
 			case ami.KindDisconnected:
 				g.Reset() // 받다 만 목록은 버린다
+				r.setConn(false, false)
 				r.log.Warn("AMI 끊김: 다시 연결되면 재동기화한다", "err", ev.Err)
 			case ami.KindAMI:
 				if ev.Msg.Event() == "FullyBooted" {
@@ -136,6 +187,7 @@ func (r *Runner) Run(ctx context.Context) error {
 					r.emit(ctx, r.core.Apply(ti.At, ti.Input))
 					if ti.Input.Kind == state.InputQueueSnapshot {
 						r.markSynced()
+						r.setConn(true, true)
 					}
 				}
 			}
@@ -146,8 +198,44 @@ func (r *Runner) Run(ctx context.Context) error {
 			r.emit(ctx, r.core.Advance(now.UnixMicro()))
 		case reply := <-r.snaps:
 			reply <- r.core.Snapshot().Line()
+		case req := <-r.views:
+			if req.sub != nil {
+				r.subs[req.sub] = struct{}{}
+			}
+			req.reply <- r.stateJSON()
+		case sub := <-r.unsubs:
+			r.drop(sub)
 		}
 	}
+}
+
+// broadcast는 화면 구독자에게 줄 하나를 보낸다. 받지 못할 만큼 밀린 화면은 끊는다
+// (actor를 기다리게 하지 않는다. 화면은 다시 붙어서 전체 상태부터 받는다).
+func (r *Runner) broadcast(line string) {
+	for sub := range r.subs {
+		select {
+		case sub <- line:
+		default:
+			r.log.Warn("밀린 화면 연결을 끊음")
+			r.drop(sub)
+		}
+	}
+}
+
+func (r *Runner) drop(sub chan string) {
+	if _, ok := r.subs[sub]; ok {
+		delete(r.subs, sub)
+		close(sub)
+	}
+}
+
+// setConn은 AMI 연결·재동기화 상태를 바꾸고 화면에 알린다.
+func (r *Runner) setConn(connected, synced bool) {
+	if r.board.connected == connected && r.board.synced == synced {
+		return
+	}
+	r.board.connected, r.board.synced = connected, synced
+	r.broadcast(r.statusJSON())
 }
 
 func (r *Runner) markSynced() {
@@ -161,9 +249,12 @@ func (r *Runner) markSynced() {
 // emit은 상태머신이 낸 줄을 내보내고, 액션 줄은 execute로 넘긴다.
 func (r *Runner) emit(ctx context.Context, outs []*state.Out) {
 	for _, o := range outs {
+		line := o.Line()
 		if r.cfg.Output != nil {
-			r.cfg.Output(o.Line())
+			r.cfg.Output(line)
 		}
+		r.board.track(o, line)
+		r.broadcast(line)
 		if o.Get("kind") != "action" {
 			continue
 		}
