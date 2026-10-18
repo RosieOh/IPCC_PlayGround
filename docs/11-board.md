@@ -5,6 +5,9 @@
 
 ## 1. 실행
 
+한 번에: `script/start.sh --demo` (켜고 가짜 상담원·콜까지) → 끄기 `script/stop.sh` ([script/README.md](../script/README.md)).
+하나씩 하려면:
+
 ```bash
 make up        # Asterisk
 make engine    # 터미널 1: 상태머신 엔진 (AMI 연결 + 화면용 API http://127.0.0.1:8090)

@@ -15,6 +15,14 @@
 요구 사항: Docker Desktop, Go 1.24 이상, Node.js 20.9 이상 (화면)
 
 ```bash
+script/start.sh --demo   # 🚀 Asterisk → 엔진 → 화면을 한 번에 켜고 가짜 콜까지 → http://localhost:3000
+script/status.sh         # 📊 지금 상태
+script/stop.sh           # 🛑 끄기
+```
+
+스크립트 목록은 [script/README.md](script/README.md). 하나씩 직접 하려면 아래 make 명령을 쓴다.
+
+```bash
 make up            # Asterisk 빌드·기동 (첫 실행은 몇 분)
 make test          # 단위 테스트 (gofmt + vet + race)
 make lint          # golangci-lint (Docker로 실행)
@@ -65,6 +73,7 @@ engine/       Go 모듈 ipcc/engine — ami/, state/(상태머신), live/(실시
 legacy-rust/  상태머신 Rust 레거시 (기준 구현)
 web/          실시간 현황판 (Next.js)
 tests/        SIPp 시나리오(sipp/), 상태머신 재생 스크립트(state/)
+script/       바로 실행하는 스크립트: start · stop · status · demo · logs · check
 docs/         설계 문서
 data/         (git 제외) Asterisk 로그·CDR·queue_log
 recordings/   (git 제외) AMI 원본 녹화
