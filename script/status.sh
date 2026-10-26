@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 📊 지금 무엇이 켜져 있는지 한눈에 본다: Docker · Asterisk · 엔진 · 화면 · 큐 · 채널
+# 📊 지금 무엇이 켜져 있는지 한눈에 본다: Docker · Asterisk · 엔진 · 룸 큐 엔진 · 화면 · 큐 · 채널
 #
 #   script/status.sh
 #   script/status.sh --watch    2초마다 새로 그린다 (Ctrl+C로 끝)
@@ -47,6 +47,21 @@ show() {
 		summary=$(engine_summary 2>/dev/null) && note "$summary"
 	elif [ -n "$(engine_pids)" ]; then
 		warn "프로세스는 있는데 화면용 API가 없어요 (-http 꺼짐?)"
+	else
+		fail "꺼져 있어요 → script/start.sh"
+	fi
+
+	row "🏠" "룸 큐 엔진"
+	if rq_up; then
+		pids=$(rq_pids | tr '\n' ' ')
+		if rq_synced; then
+			ok "실행 중 · 채널 목록으로 재동기화 끝 ${D}(PID ${pids% })${R}"
+		else
+			warn "실행 중 · 재동기화 기다리는 중"
+		fi
+		summary=$(rq_summary 2>/dev/null) && note "$summary"
+	elif [ -n "$(rq_pids)" ]; then
+		warn "프로세스는 있는데 화면용 API가 없어요 (make rq-engine이 아닌 -http 없이 켬?)"
 	else
 		fail "꺼져 있어요 → script/start.sh"
 	fi

@@ -1,7 +1,8 @@
 # 11. 실시간 현황판 — Stage 3 첫 화면 (Next.js)
 
 상태머신 엔진(Stage 2)이 낸 줄을 브라우저에서 실시간으로 본다. 상담원 카드의 버튼으로 엔진에 명령(로그인·대기·이석·후처리 완료·로그아웃)도 보낸다.
-화면은 한 장이고, 구조는 운영 포탈에서 흔한 배치를 따랐다: 떠 있는 아이콘 레일 | 페이지 헤더 + 섹션(요약 카드 → 항목 카드 → 표 → 로그).
+구조는 운영 포탈에서 흔한 배치를 따랐다: 떠 있는 아이콘 레일 | 페이지 헤더 + 섹션(요약 카드 → 항목 카드 → 표 → 로그).
+같은 셸로 **룸 큐 현황판**(`/rooms`, 룸 큐 엔진 `bin/rqengine`, [12 문서](12-room-queue.md))도 있다 — 7절. 레일 아래쪽 ⇄ 버튼으로 오간다.
 
 ## 1. 실행
 
@@ -105,7 +106,7 @@ SSE 첫 메시지와 같은 JSON을 한 번 준다. `curl -s 127.0.0.1:8090/api/
 | 콜 | `components/calls.tsx` | 진행 중인 콜(대기 중이면 대기 시간), 최근 종료(결과·대기·통화 시간) |
 | 이벤트 로그 | `components/event-log.tsx` | 엔진이 낸 줄을 문장으로. 종류별 필터. 액션 줄 = 엔진이 Asterisk에 보낸 명령 |
 | 데이터 | `lib/engine.ts`, `lib/use-engine.ts` | 줄 타입, 리듀서, 상태 이름·색, SSE 구독, 1초 시계 |
-| 게이트웨이 | `app/api/engine/*/route.ts` | 엔진 SSE 중계, 명령 전달, 엔진이 꺼졌을 때 `engine-down` 이벤트 |
+| 게이트웨이 | `app/api/engine/*/route.ts`, `lib/server.ts` | 엔진 SSE 중계, 명령 전달, 엔진이 꺼졌을 때 `engine-down` 이벤트 (중계 코드는 두 현황판이 같이 쓴다) |
 | 디자인 | `app/globals.css` | 토큰(라이트·다크), 유리 재질, 컴포넌트 클래스. Tailwind 4는 배치용 |
 
 상태 색: 대기 초록 · 벨울림 노랑(깜빡임) · 통화중 파랑 · 보류 주황 · 후처리 보라 · 이석 분홍 · 로그아웃 회색.
@@ -119,8 +120,32 @@ SSE 첫 메시지와 같은 JSON을 한 번 준다. `curl -s 127.0.0.1:8090/api/
 
 ## 6. 다음 과제 (Stage 3의 나머지)
 
+(룸 큐 현황판은 7절)
+
 - [ ] 상담원 툴바 화면: 상담원 한 명 입장의 화면 (걸기, 전환, 보류, 당겨받기 → 엔진 명령 API 확장)
 - [ ] 게이트웨이를 여러 대 띄우거나 엔진과 따로 재시작하려면 Redis pub/sub을 사이에 둔다 (02 문서 Stage 3)
 - [ ] WebSocket이 필요한 곳 찾기: 지금은 서버 → 화면 한 방향이라 SSE로 충분하다. 화면 → 서버가 잦아지면 바꾼다
 - [ ] 감청·코칭·강제개입 (`ChanSpy`를 `Originate`로)
 - [ ] 큐 대기열 순번과 최장 대기를 엔진 모델에 넣기 (06 문서 11절) → 현황판의 대기 고객 카드가 정확해진다
+
+## 7. 룸 큐 현황판 (`/rooms`)
+
+룸 큐 엔진(`bin/rqengine -http 127.0.0.1:8091`)의 상태를 같은 셸로 보여 준다. `script/start.sh`가 함께 켜고, `script/demo.sh --rooms`로 움직여 본다.
+따로 켜려면 `make rq-engine`(엔진 + API) → `make web` → `http://localhost:3000/rooms`.
+
+| 영역 | 파일 | 내용 |
+|---|---|---|
+| 큐 현황 | `components/rq-rooms.tsx` | 대기 고객(큐별, 최장 대기), 통화 중인 방(보류·협의·3자 수), 받을 수 있는 상담원, 처리한 콜 |
+| 두 축 표 | `components/rq-rooms.tsx` `ModePhaseMatrix` | 업무 모드(행) × 통화 단계(열)마다 상담원 수. 콜을 받는 칸(대기 × 통화 없음)을 표시 |
+| 상담원 | `components/rq-agents.tsx` | 배지·타이머를 축마다 하나씩(후처리는 남은 시간), 스킬, 고객 번호와 보류·협의 표시. 버튼: 대기·이석·후처리 완료·스킬, 통화 중이면 보류/해제·전환·협의·3자, 협의 중이면 완료·취소·3자로 합치기 |
+| 방 | `components/rq-rooms.tsx` | 진행 중인 방(큐, 상태, 고객 보류, 협의 상대, 방 안의 상담원, 경과), 최근 종료 |
+| 이벤트 로그 | `components/rq-event-log.tsx` | 엔진이 낸 줄을 문장으로. 액션은 실제 AMI 액션 이름(Originate, Hangup, Redirect, ConfbridgeStartRecord)으로 |
+| 데이터 | `lib/rq.ts` | 줄 타입, 리듀서(축마다 바뀐 시각을 따로 잡는다 — 엔진 `rq/view.go`와 같은 기준), 이름·색 |
+| 게이트웨이 | `app/api/rq/*/route.ts` | `RQ_ENGINE_URL`(기본 `http://127.0.0.1:8091`)로 중계 |
+
+엔진 HTTP API는 Stage 2 엔진과 같은 모양이다(`engine/rq/http.go`): `GET /api/state`, `GET /api/events`(SSE, 처음에 `event: state`),
+`POST /api/commands` `{"kind":"consult","iface":"Local/1001@sim-agent","arg":"Local/1002@sim-agent"}` — kind는 `rq.CommandNames`.
+전체 상태의 `agents`·`calls`는 출력 줄과 같은 모양이고, `since.mode`·`since.phase`는 상담원의 두 축이 각각 지금 값이 된 시각이다.
+
+3000번 포트를 다른 프로그램이 쓰고 있으면 `WEB_PORT=3001 script/start.sh` (status·stop에도 같은 값을 준다).
+

@@ -69,6 +69,22 @@ export const IconChevronDown = (p: P) => (
   </svg>
 );
 
+export const IconSwitch = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5" />
+  </svg>
+);
+
+/** 회의방: 둥근 탁자에 둘러앉은 셋 */
+export const IconRooms = (p: P) => (
+  <svg {...base} {...p}>
+    <ellipse cx="12" cy="14" rx="6" ry="3" />
+    <circle cx="12" cy="6" r="2" />
+    <circle cx="4.5" cy="9.5" r="1.8" />
+    <circle cx="19.5" cy="9.5" r="1.8" />
+  </svg>
+);
+
 export const IconBook = (p: P) => (
   <svg {...base} {...p}>
     <path d="M4 5a2 2 0 0 1 2-2h13v15H6a2 2 0 0 0-2 2V5z" />

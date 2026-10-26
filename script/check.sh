@@ -6,7 +6,7 @@
 #   script/check.sh --no-restart   e2e에서 Asterisk 재시작 단계를 뺀다
 #
 # 검사마다 로그는 .run/check-<이름>.log 에 남는다. 하나가 실패해도 끝까지 돌고, 실패가 있으면 종료 코드 1.
-# 엔진·화면이 떠 있으면 e2e·화면 검사는 건너뛴다 (먼저 script/stop.sh).
+# 엔진(룸 큐 엔진 포함)·화면이 떠 있으면 e2e·화면 검사는 건너뛴다 (먼저 script/stop.sh).
 
 set -uo pipefail
 # shellcheck source=script/lib.sh
@@ -61,9 +61,9 @@ else
 fi
 
 if [ "$QUICK" = 0 ]; then
-	if [ -n "$(engine_pids)" ]; then
+	if [ -n "$(engine_pids)$(rq_pids)" ]; then
 		row "📡" "e2e (실제 Asterisk)"
-		warn "건너뜀: 엔진이 떠 있어요. 엔진 두 개가 같은 큐 멤버를 움직여요 → script/stop.sh 후 다시"
+		warn "건너뜀: 엔진이 떠 있어요. e2e의 엔진과 같은 상담원·콜을 움직여요 → script/stop.sh 후 다시"
 		results="$results|📡|e2e (실제 Asterisk)|▲ 건너뜀|-"
 		failed=$((failed + 1))
 	else

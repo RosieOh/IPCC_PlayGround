@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { agentStateInfo, NOT_READY_REASONS, type Agent, type Board } from "@/lib/engine";
 import { fmtDuration, fmtPhone } from "@/lib/format";
 import { sendCommand } from "@/lib/use-engine";
-import { IconChevronDown, IconLogout } from "./icons";
+import { IconLogout } from "./icons";
+import { PickMenu } from "./menu";
 
 const ORDER = ["Ringing", "Talking", "Hold", "ACW", "Ready", "NotReady", "LoggedOut"];
 
@@ -121,53 +122,8 @@ function AgentCard({ agent, board, now }: { agent: Agent; board: Board; now: num
 }
 
 /** 이석 사유를 고르는 작은 메뉴 */
-function ReasonMenu({ label, disabled, onPick }: { label: string; disabled: boolean; onPick: (reason: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: PointerEvent | KeyboardEvent) => {
-      if (e instanceof KeyboardEvent ? e.key === "Escape" : !ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", close);
-    document.addEventListener("keydown", close);
-    return () => {
-      document.removeEventListener("pointerdown", close);
-      document.removeEventListener("keydown", close);
-    };
-  }, [open]);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        className="btn btn-xs btn-secondary"
-        disabled={disabled}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-      >
-        {label}
-        <IconChevronDown className="size-3.5" />
-      </button>
-      {open && (
-        <div className="menu left-0 top-[calc(100%+6px)]" role="menu">
-          {NOT_READY_REASONS.map((r) => (
-            <button
-              key={r}
-              role="menuitem"
-              className="menu-item"
-              onClick={() => {
-                setOpen(false);
-                onPick(r);
-              }}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+export function ReasonMenu({ label, disabled, onPick }: { label: string; disabled: boolean; onPick: (reason: string) => void }) {
+  return <PickMenu label={label} disabled={disabled} onPick={onPick} options={NOT_READY_REASONS.map((r) => ({ value: r, label: r }))} />;
 }
 
 const PRESETS = [
@@ -186,8 +142,9 @@ function defaultName(iface: string): string {
   return iface.split("/").pop() ?? iface;
 }
 
-/** 상담원 로그인. 엔진은 NotReady(로그인)로 큐에 넣는다 → 카드의 [대기]를 눌러야 콜을 받는다 */
-export function LoginForm() {
+/** 상담원 로그인. 엔진은 NotReady(로그인)로 둔다 → 카드의 [대기]를 눌러야 콜을 받는다. endpoint는 명령 게이트웨이 */
+export function LoginForm({ endpoint = "/api/engine/commands" }: { endpoint?: string }) {
+  const listId = `agent-presets${endpoint.replace(/\W+/g, "-")}`;
   const [iface, setIface] = useState(PRESETS[0]);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
@@ -198,7 +155,7 @@ export function LoginForm() {
     setBusy(true);
     setError(null);
     try {
-      await sendCommand("login", iface.trim(), name.trim() || defaultName(iface.trim()));
+      await sendCommand("login", iface.trim(), name.trim() || defaultName(iface.trim()), endpoint);
       setName("");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -211,14 +168,14 @@ export function LoginForm() {
     <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
       <input
         className="input w-[13.5rem]"
-        list="agent-presets"
+        list={listId}
         value={iface}
         onChange={(e) => setIface(e.target.value)}
         aria-label="상담원 인터페이스"
         placeholder="Local/1001@sim-agent"
         required
       />
-      <datalist id="agent-presets">
+      <datalist id={listId}>
         {PRESETS.map((p) => (
           <option key={p} value={p} />
         ))}
