@@ -40,9 +40,9 @@ const usage = `amicli — AMI 학습용 CLI
       상담원 큐 로그인/로그아웃/이석/대기 (내선 생략 시 1001 1002 1003).
       -sim이면 가짜 상담원(Local/<내선>@sim-agent)을 다룬다.
 
-  amicli sim-call [-n N] [-gap 2s] [-patience 300] [-talk 0] [-exten customer|rq-customer]
+  amicli sim-call [-n N] [-gap 2s] [-patience 300] [-talk 0] [-exten customer|rq-customer|rq-sales]
       가짜 고객 콜을 대표번호로 인입시킨다. -patience를 짧게 주면 대기 중 포기(abandon)가 된다.
-      -exten rq-customer면 룸 큐(5100, bin/rqengine)로 들어간다.
+      -exten rq-customer면 룸 큐 support(5100), rq-sales면 sales(5101)로 들어간다 (bin/rqengine).
 
 공통 옵션: -addr (AMI_ADDR, 기본 127.0.0.1:5038) -user (AMI_USER) -secret (AMI_SECRET)
           -md5 (챌린지 방식 로그인, 비밀번호를 보내지 않는다) -debug

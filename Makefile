@@ -164,11 +164,11 @@ web-check: ## 화면 검사: npm ci + lint + 타입 검사 + 빌드 (CI와 같�
 	cd web && npm ci && npm run lint && npm run typecheck && NEXT_TELEMETRY_DISABLED=1 npm run build
 
 ## 룸 큐: app_queue 없이 엔진이 상담원을 고르는 큐 (docs/12)
-rq-engine: build ## 룸 큐 엔진 실행. stdin: login/ready/notready/wrapup/transfer/conference <인터페이스> [인자]. 가짜 상담원 통화 6초
-	bin/rqengine -sim-talk 6
+rq-engine: build ## 룸 큐 엔진 + 화면용 API 127.0.0.1:8091 (녹음 켬). stdin 명령은 docs/12 6절. 가짜 상담원 통화 20초
+	bin/rqengine -sim-talk 20 -record -http 127.0.0.1:8091
 
-sim-rq-call: build ## 가짜 고객을 룸 큐(5100)로. 예) make sim-rq-call n=3
-	$(AMICLI) sim-call -exten rq-customer -n $(or $(n),1)
+sim-rq-call: build ## 가짜 고객을 룸 큐로. 예) make sim-rq-call n=3, make sim-rq-call q=sales (5101)
+	$(AMICLI) sim-call -exten $(if $(filter-out support,$(q)),rq-$(q),rq-customer) -n $(or $(n),1)
 
 ## SIP 자동 테스트 (SIPp, 컨테이너 안에서 실행)
 sip-register: ## 9001로 등록 (REGISTER → 401 → 인증 → 200)

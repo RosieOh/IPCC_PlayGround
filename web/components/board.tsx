@@ -8,7 +8,7 @@ import { EventLog } from "./event-log";
 import { PageHeader } from "./header";
 import { IconActivity, IconHeadset, IconOverview, IconPhone } from "./icons";
 import { Overview } from "./overview";
-import { Rail, type RailItem } from "./rail";
+import { DOCS, Rail, type RailItem } from "./rail";
 import { World } from "./world";
 
 const SECTIONS: RailItem[] = [
@@ -56,9 +56,23 @@ export function Board() {
   return (
     <div className="app">
       <World />
-      <Rail items={SECTIONS} active={active} />
+      <Rail
+        items={SECTIONS}
+        active={active}
+        doc={{ href: `${DOCS}/06-state-model.md`, label: "상태 모델 문서 (docs/06)" }}
+        other={{ href: "/rooms", label: "룸 큐 현황판 (app_queue 없는 큐)" }}
+      />
       <div className="content">
-        <PageHeader board={board} now={now} />
+        <PageHeader
+          title="실시간 현황판"
+          sub={
+            <>
+              상태머신 엔진(<span className="mono">bin/engine</span>)이 낸 줄을 그대로 보여 줘요 · {board.queue} 큐
+            </>
+          }
+          state={board}
+          now={now}
+        />
         <main className="main" ref={main}>
           <div className="page">
             {board.link === "engine-down" && (

@@ -1,17 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type ComponentType, type MouseEvent, type SVGProps } from "react";
-import { IconBook, IconHeadset, IconMoon, IconSun } from "./icons";
+import { IconBook, IconHeadset, IconMoon, IconSun, IconSwitch } from "./icons";
 
 export type RailItem = { id: string; label: string; icon: ComponentType<SVGProps<SVGSVGElement>> };
+type RailLink = { href: string; label: string };
+
+export const DOCS = "https://github.com/RosieOh/IPCC_PlayGround/blob/main/docs";
 
 const STEP = 48; // 버튼 40px + 간격 8px
 
 /**
  * 화면 가장자리에서 떨어져 떠 있는 아이콘 레일. 한 화면짜리라 메뉴는 섹션으로 이동한다.
  * 현재 위치는 유리 물방울(.rail-blob)이 표시하고, 마우스를 올린 메뉴로 미끄러져 간다.
+ * 아래쪽에는 다른 현황판으로 가는 링크(other)와 설계 문서(doc)가 있다.
  */
-export function Rail({ items, active }: { items: RailItem[]; active: string }) {
+export function Rail({ items, active, doc, other }: { items: RailItem[]; active: string; doc: RailLink; other: RailLink }) {
   const [hover, setHover] = useState<number | null>(null);
   const activeIndex = Math.max(
     0,
@@ -22,7 +27,7 @@ export function Rail({ items, active }: { items: RailItem[]; active: string }) {
   return (
     <aside className="rail glass" aria-label="화면 메뉴">
       <div className="flex flex-col items-center gap-5">
-        <a href="#overview" className="brand-mark" aria-label="맨 위로">
+        <a href={`#${items[0]?.id ?? ""}`} className="brand-mark" aria-label="맨 위로">
           <IconHeadset className="size-[18px]" />
         </a>
         <ul className="rail-list" onMouseLeave={() => setHover(null)}>
@@ -47,15 +52,13 @@ export function Rail({ items, active }: { items: RailItem[]; active: string }) {
       </div>
       <div className="flex flex-col items-center gap-2">
         <div className="rail-sep" />
-        <a
-          className="rail-link"
-          href="https://github.com/RosieOh/IPCC_PlayGround/blob/main/docs/06-state-model.md"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="상태 모델 문서"
-        >
+        <Link className="rail-link" href={other.href} aria-label={other.label}>
+          <IconSwitch />
+          <span className="tip">{other.label}</span>
+        </Link>
+        <a className="rail-link" href={doc.href} target="_blank" rel="noreferrer" aria-label={doc.label}>
           <IconBook />
-          <span className="tip">상태 모델 문서 (docs/06)</span>
+          <span className="tip">{doc.label}</span>
         </a>
         <button type="button" className="rail-link" aria-label="테마 바꾸기" onClick={toggleTheme}>
           <IconSun className="hidden dark:block" />

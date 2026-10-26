@@ -134,8 +134,10 @@
 **심화 과제: 룸 큐 — app_queue 없이 직접 만든 큐** ✅ (요청으로 구현 → [12-room-queue.md](12-room-queue.md))
 - `engine/rq`, `bin/rqengine`: 엔진이 대기열을 갖고 상담원을 고른다. 고객은 통화별 회의방(ConfBridge)에서 대기음, 엔진이 Originate로 상담원을 부름
 - 상담원 상태 두 축(업무 모드 × 통화 단계), dialplan은 UserEvent로 사실만 알림, 전환·3자통화는 방에 넣고 빼기
-- `make rq-engine`, `make sim-rq-call`, 단위 테스트 12개, e2e `TestRoomQueue`
-- [ ] 남은 과제: 재시작 시 방 재동기화, 벨 중 고객 이탈 시 상담원 벨 취소, 스킬 분배, 보류, 협의 전환, 녹음, 화면 연동 (12 문서 8절)
+- `make rq-engine`, `make sim-rq-call`, 단위 테스트, e2e `TestRoomQueue`
+- [x] 이어서 (요청으로 구현): 재시작 시 방 재동기화(업무 상태 파일 + CoreShowChannels), 벨 중 고객 이탈 시 벨 취소(ChannelId),
+  스킬 분배, 보류(보류 방), 협의 전환, 녹음(ConfbridgeStartRecord), 현황판 `/rooms`(두 축 표시) — D-022, D-023
+- [ ] 남은 과제: 진행 중인 의도 복원, 엔진 이중화, 우선순위·VIP, 대기 안내, 콜백 … (12 문서 9절)
 
 **완료 기준**
 - [x] 모든 시나리오 녹화의 replay 결과가 기대 출력과 같다 (golden test, `make test`)

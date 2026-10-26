@@ -8,8 +8,9 @@
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_DIR="$ROOT/.run"
 ENGINE_URL="http://127.0.0.1:8090"
-WEB_URL="http://localhost:3000"
-WEB_PORT=3000
+RQ_URL="http://127.0.0.1:8091" # 룸 큐 엔진 (bin/rqengine -http, docs/12)
+WEB_PORT="${WEB_PORT:-3000}" # 3000번을 다른 프로그램이 쓰면: WEB_PORT=3001 script/start.sh (status·stop에도 같이 준다)
+WEB_URL="http://localhost:$WEB_PORT"
 QUEUE="support"
 COMPOSE=(docker compose -f "$ROOT/docker-compose.yml")
 mkdir -p "$RUN_DIR"
@@ -133,6 +134,11 @@ engine_synced() { engine_api | grep -q '"synced":true'; }
 # 저장소의 bin/engine 프로세스 (make engine으로 켠 것도 찾는다)
 engine_pids() { pgrep -f "(^|/)bin/engine( |$)" 2>/dev/null || true; }
 
+rq_api() { curl -sf --max-time 2 "$RQ_URL/api/state"; }
+rq_up() { rq_api >/dev/null; }
+rq_synced() { rq_api | grep -q '"synced":true'; }
+rq_pids() { pgrep -f "(^|/)bin/rqengine( |$)" 2>/dev/null || true; }
+
 web_up() { [ "$(curl -s --max-time 3 -o /dev/null -w '%{http_code}' "http://127.0.0.1:$WEB_PORT/" 2>/dev/null)" = 200 ]; }
 # 3000번 포트에서 듣고 있는 프로세스 중 이 저장소의 web/에서 실행된 것만
 web_pids() {
@@ -144,9 +150,13 @@ web_pids() {
 }
 port_busy() { [ -n "$(lsof -ti "tcp:$1" -sTCP:LISTEN 2>/dev/null)" ]; }
 
-# 엔진 명령 보내기: send_cmd 종류 인터페이스 [인자]
+# 엔진 명령 보내기: send_cmd 종류 인터페이스 [인자]  (룸 큐 엔진은 send_rq)
 send_cmd() {
 	curl -sf --max-time 3 -X POST "$ENGINE_URL/api/commands" -H 'Content-Type: application/json' \
+		-d "{\"kind\":\"$1\",\"iface\":\"$2\",\"arg\":\"${3:-}\"}" >/dev/null
+}
+send_rq() {
+	curl -sf --max-time 3 -X POST "$RQ_URL/api/commands" -H 'Content-Type: application/json' \
 		-d "{\"kind\":\"$1\",\"iface\":\"$2\",\"arg\":\"${3:-}\"}" >/dev/null
 }
 
@@ -164,6 +174,20 @@ engine_summary() {
 		});'
 }
 
+# 룸 큐 엔진 상태 JSON에서 요약 한 줄 (상담원은 두 축: 업무 모드 × 통화 단계)
+rq_summary() {
+	command -v node >/dev/null || return 1
+	# shellcheck disable=SC2016  # 작은따옴표 안은 node의 JavaScript다
+	rq_api | node -e '
+		let s = ""; process.stdin.on("data", d => (s += d)).on("end", () => {
+			const v = JSON.parse(s), a = v.agents.filter(x => x.mode !== "Logout");
+			const n = (k, val) => a.filter(x => x[k] === val).length;
+			const ready = a.filter(x => x.mode === "Inbound" && x.phase === "Idle").length;
+			console.log(`상담원 ${a.length}명 (받을 수 있음 ${ready} · 벨 ${n("phase", "Ring")} · 통화 ${n("phase", "Talk")} · 후처리 ${n("mode", "ACW")} · 이석 ${n("mode", "NotReady")})` +
+				` · 진행 중인 방 ${v.calls.length}개 · 처리 ${v.totals.handled}건 · 포기 ${v.totals.abandoned}건`);
+		});'
+}
+
 # detach 로그파일 명령… → 터미널과 떨어진 새 세션에서 뒤로 돌리고 PID를 출력한다.
 # nohup만으로는 부족하다: 터미널 창을 닫으면 Next.js 개발 서버가 같이 꺼졌다 (macOS에는 setsid 명령이 없어 perl을 쓴다)
 detach() {
@@ -174,7 +198,7 @@ detach() {
 }
 
 ensure_bins() {
-	if [ ! -x "$ROOT/bin/engine" ] || [ ! -x "$ROOT/bin/amicli" ]; then
+	if [ ! -x "$ROOT/bin/engine" ] || [ ! -x "$ROOT/bin/rqengine" ] || [ ! -x "$ROOT/bin/amicli" ]; then
 		(cd "$ROOT" && make -s build >/dev/null)
 	fi
 }
