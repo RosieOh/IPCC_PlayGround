@@ -131,6 +131,12 @@
 - [ ] 읽기 과제: `state.go`와 `engine.rs`를 나란히 놓고 07 문서 10절의 표를 보지 않고 다시 만들어 보기
 - [ ] 바꿔 보기 과제: 정책 하나를 추가(예: 후처리 상한을 상담원마다 다르게)하고 Rust → 기대 출력 → Go 순서로 반영해 0 diff 만들기
 
+**심화 과제: 룸 큐 — app_queue 없이 직접 만든 큐** ✅ (요청으로 구현 → [12-room-queue.md](12-room-queue.md))
+- `engine/rq`, `bin/rqengine`: 엔진이 대기열을 갖고 상담원을 고른다. 고객은 통화별 회의방(ConfBridge)에서 대기음, 엔진이 Originate로 상담원을 부름
+- 상담원 상태 두 축(업무 모드 × 통화 단계), dialplan은 UserEvent로 사실만 알림, 전환·3자통화는 방에 넣고 빼기
+- `make rq-engine`, `make sim-rq-call`, 단위 테스트 12개, e2e `TestRoomQueue`
+- [ ] 남은 과제: 재시작 시 방 재동기화, 벨 중 고객 이탈 시 상담원 벨 취소, 스킬 분배, 보류, 협의 전환, 녹음, 화면 연동 (12 문서 8절)
+
 **완료 기준**
 - [x] 모든 시나리오 녹화의 replay 결과가 기대 출력과 같다 (golden test, `make test`)
 - [x] Rust 구현과 Go 구현의 출력이 모든 녹화에서 같다 (`make diff-test`, CI)

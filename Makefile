@@ -38,6 +38,7 @@ RUST_REPLAY_ALL := cargo build --release -q && /repo/tests/state/replay-all.sh /
 .PHONY: help up up-lan down restart ps logs cli rx reload sngrep pcap sh \
 	build watch agent-login agent-logout sim-agents sim-logout sim-call sim-abandon \
 	test lint e2e rtp-check event-dict scenarios rust-test golden diff-test engine web web-check \
+	rq-engine sim-rq-call \
 	sip-register sip-echo sip-queue sip-agent-call clean clean-data
 
 help: ## 이 목록
@@ -85,8 +86,8 @@ sh: ## 컨테이너 셸
 	$(AST) bash
 
 ## Go 엔진 / AMI
-build: ## Go 빌드 → bin/amicli, bin/state(녹화 재생), bin/engine(실시간 엔진)
-	cd engine && go build -o ../bin/ ./cmd/amicli ./cmd/state ./cmd/engine
+build: ## Go 빌드 → bin/amicli, bin/state(녹화 재생), bin/engine(실시간 엔진), bin/rqengine(룸 큐 엔진)
+	cd engine && go build -o ../bin/ ./cmd/amicli ./cmd/state ./cmd/engine ./cmd/rqengine
 
 watch: build ## AMI 이벤트 실시간 보기 + 원본 녹화 (recordings/)
 	$(AMICLI) watch -record recordings
@@ -161,6 +162,13 @@ web: ## 실시간 현황판 개발 서버 → http://localhost:3000 (먼저 make
 
 web-check: ## 화면 검사: npm ci + lint + 타입 검사 + 빌드 (CI와 같다)
 	cd web && npm ci && npm run lint && npm run typecheck && NEXT_TELEMETRY_DISABLED=1 npm run build
+
+## 룸 큐: app_queue 없이 엔진이 상담원을 고르는 큐 (docs/12)
+rq-engine: build ## 룸 큐 엔진 실행. stdin: login/ready/notready/wrapup/transfer/conference <인터페이스> [인자]. 가짜 상담원 통화 6초
+	bin/rqengine -sim-talk 6
+
+sim-rq-call: build ## 가짜 고객을 룸 큐(5100)로. 예) make sim-rq-call n=3
+	$(AMICLI) sim-call -exten rq-customer -n $(or $(n),1)
 
 ## SIP 자동 테스트 (SIPp, 컨테이너 안에서 실행)
 sip-register: ## 9001로 등록 (REGISTER → 401 → 인증 → 200)
