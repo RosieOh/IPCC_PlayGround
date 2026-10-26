@@ -289,7 +289,7 @@ func runSimCall(ctx context.Context, args []string) error {
 	gap := fs.Duration("gap", 2*time.Second, "콜 사이 간격")
 	patience := fs.Int("patience", 300, "고객이 전화를 들고 있는 최대 시간(초). 짧게 주면 대기 중 포기가 된다")
 	talk := fs.Int("talk", 0, "상담원 통화 시간(초). 0이면 5~15초 랜덤")
-	exten := fs.String("exten", "customer", "[sim]의 고객 내선: customer(app_queue 큐) 또는 rq-customer(룸 큐, docs/12)")
+	exten := fs.String("exten", "customer", "[sim]의 고객 내선: customer(app_queue 큐), rq-customer·rq-sales(룸 큐 support·sales, docs/12)")
 	_ = fs.Parse(args)
 
 	c, stop, err := connectOnce(ctx, o)

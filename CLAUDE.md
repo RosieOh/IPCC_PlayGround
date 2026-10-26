@@ -34,16 +34,16 @@
 | 실시간 현황판 | `make engine`(엔진 + 화면용 API 127.0.0.1:8090) → `make web`(http://localhost:3000) |
 | 화면 검사 | `make web-check` (npm ci + lint + 타입 검사 + 빌드, CI의 web 작업) |
 | 한 번에 켜기 / 끄기 / 상태 | `script/start.sh [--demo]` / `script/stop.sh [--all]` / `script/status.sh` (PID·로그는 `.run/`) |
-| 데모 콜 / 로그 / 전체 검사 | `script/demo.sh [-n N] [--loop]` / `script/logs.sh engine\|web\|asterisk` / `script/check.sh [--quick]` |
+| 데모 콜 / 로그 / 전체 검사 | `script/demo.sh [-n N] [--loop] [--rooms]` / `script/logs.sh engine\|rq\|web\|asterisk` / `script/check.sh [--quick]` |
 | 가짜 상담원 / 가짜 콜 | `make sim-agents`, `make sim-call n=3`, `make sim-abandon` |
-| 룸 큐 (app_queue 없는 큐, 대표번호 5100) | `make rq-engine`(stdin 명령) → `make sim-rq-call n=3` |
+| 룸 큐 (app_queue 없는 큐, 5100 support · 5101 sales) | `make rq-engine`(stdin 명령 + API 127.0.0.1:8091) → `make sim-rq-call n=3 [q=sales]` → 현황판 `/rooms` |
 | SIP 자동 테스트 | `make sip-register`, `make sip-echo`, `make sip-queue`, `make sip-agent-call` |
 | 음성(RTP) 경로 검사 | `make rtp-check` — Mac에서 602 에코로 RTP 왕복을 센다 |
 | 이벤트 녹화·재생·집계 | `bin/amicli watch -record DIR`, `bin/amicli replay [-only E1,E2] [-v] FILE`, `bin/amicli stats [-fields] FILE…` |
 | 이벤트 사전 다시 만들기 | `make event-dict` (testdata 녹화를 바꾸면 실행. docs/10은 손으로 고치지 않는다) |
 
 동작을 확인할 때는 사람에게 묻기 전에 직접 돌려 본다. 기본은 `make test && make lint && make diff-test && make e2e`(CI와 같다).
-`web/`을 바꿨으면 `make web-check`도 돌린다. e2e 전에는 띄워 둔 `bin/engine`을 내린다 (엔진 두 개가 같은 큐 멤버를 움직인다).
+`web/`을 바꿨으면 `make web-check`도 돌린다. e2e 전에는 띄워 둔 `bin/engine`·`bin/rqengine`을 내린다 (e2e의 엔진과 같은 상담원·콜을 움직인다).
 이벤트를 자세히 보려면 `bin/amicli watch -record <임시 디렉터리>`를 백그라운드로 띄우고
 `make sim-agents` + `make sim-call` → 녹화를 `bin/amicli replay`로 확인한다.
 변경은 브랜치 → PR → CI 통과 순서로 올린다 (D-013).
@@ -92,3 +92,5 @@
 - dialplan에서 Linkedid는 `${CHANNEL(linkedid)}`다 (`${LINKEDID}` 변수는 없다).
 - 비동기 Originate가 실패하면 OriginateResponse의 Channel은 요청한 문자열 그대로(`Local/1004@sim-noanswer`)다. 성공이면 `-0000000b;1`이 붙는다.
 - ConfBridge `end_marked`: 마지막 marked 사용자가 나갈 때 고객이 나간다. 회의방 전환은 새 상담원이 들어온 뒤 원래 상담원을 뺀다.
+- Originate `ChannelId`가 만들 채널의 Uniqueid가 된다 (Local 반대쪽은 `;2`). 실패한 OriginateResponse에도 그 Uniqueid가 온다. AMI Hangup은 Uniqueid도 받는다.
+- `Redirect`로 회의방에서 뺀 채널은 끊김 처리기를 부르지 않는다 (ConfbridgeLeave만). 녹음 채널은 채널 목록·Parties에 나오지 않는다.

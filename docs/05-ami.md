@@ -251,6 +251,17 @@ RingTime: 2
 24. **ConfBridge의 `end_marked`는 '마지막' marked 사용자가 나갈 때 동작한다.** 상담원(marked) 둘이 있는 방에서 한 명이 나가도
     고객은 남고, 마지막 상담원이 나가면 고객이 곧바로 방에서 나온다(ConfbridgeLeave → 끊김 처리기의 UserEvent).
     그래서 회의방 기반 전환은 **새 상담원이 들어온 뒤에** 원래 상담원을 빼야 한다.
+25. **Originate에 `ChannelId`를 주면 만들어질 채널의 Uniqueid가 그 값이 된다.** Local 채널이면 반대쪽은 `<ChannelId>;2`다.
+    실패한 `OriginateResponse`에도 `Uniqueid: <ChannelId>`가 그대로 온다 (ChannelId가 없으면 `<unknown>`).
+    그래서 엔진이 "어느 벨에 대한 응답인지"를 채널 이름 추측 없이 맞출 수 있다. `Reason`은 무응답 3, 받기 전에 끊으면 0, 성공 4.
+26. **AMI `Hangup`의 `Channel`에는 Uniqueid도 된다.** 벨이 울리는 동안(채널 이름을 아직 모를 때) ChannelId로 끊을 수 있다 (응답 `Channel Hungup`).
+27. **`Redirect`로 ConfBridge 안의 채널을 빼면 `ConfbridgeLeave`만 오고 끊김 처리기는 불리지 않는다.** 채널은 새 위치의 dialplan을 이어서 실행한다
+    (회의방 앱 다음 줄의 `Hangup()`도 실행되지 않는다). 다른 사용자가 남아 있으면 방도 그대로다. → 고객만 보류 방으로 옮기는 보류의 근거
+28. **`ConfbridgeStartRecord`의 녹음 채널은 CoreShowChannels·ConfbridgeList에 나오지 않고, `ConfbridgeListRooms`의 `Parties`에도 세지 않는다.**
+    파일 이름에는 `-<시각>`이 붙고(`<RecordFile>`이 `rq-x.wav`면 `rq-x-1792991354.wav`), 방이 닫히면 `ConfbridgeStopRecord`가 온다.
+29. **CoreShowChannel의 `ApplicationData`로 회의방과 역할을 알 수 있다.** 방 안의 채널은 `Application: ConfBridge`,
+    `ApplicationData: <방>,<브리지 프로필>,<사용자 프로필>`. 벨이 울리는 Originate 채널은 `Application: AppDial2`,
+    `ApplicationData: (Outgoing Line)`. 룸 큐의 재동기화는 CoreShowChannels 한 번으로 끝난다 (ConfbridgeList를 방마다 부르지 않아도 된다)
 
 ## 7. 클라이언트 설계 (`engine/ami`)
 
