@@ -241,6 +241,17 @@ RingTime: 2
 21. **벨이 울리는 중에 고객이 끊으면 상담원 쪽 이벤트가 없다.** (`ring-abandon.ami`) AgentRingNoAnswer도 AgentComplete도 없이,
     상담원 채널의 `Hangup`과 `QueueCallerAbandon`만 온다. 상담원을 '벨울림'에서 돌려놓는 건 엔진이 Abandon을 보고 해야 한다.
 
+아래는 룸 큐(app_queue 없이 직접 만든 큐, [12 문서](12-room-queue.md))를 만들며 녹화로 확인한 것이다.
+
+22. **비동기 Originate가 실패하면 `OriginateResponse`의 Channel은 요청한 문자열 그대로다.** 성공이면
+    `Local/1001@sim-agent-0000000b;1`처럼 만들어진 채널 이름이, 상담원이 받지 않으면 `Response: Failure`, `Reason: 3`과 함께
+    `Channel: Local/1004@sim-noanswer`, `Uniqueid: <unknown>`이 온다. 접미사(`-0000000b;1`)를 떼면 둘 다 같은 인터페이스가 된다.
+23. **dialplan에서 Linkedid는 `${CHANNEL(linkedid)}`다.** `${LINKEDID}`라는 변수는 없어서 빈 문자열이 된다 — 방 이름이 모두
+    `rq-`가 되어 여러 콜이 한 회의방에 모인 뒤에야 알았다. (`${UNIQUEID}`는 변수로 있다.)
+24. **ConfBridge의 `end_marked`는 '마지막' marked 사용자가 나갈 때 동작한다.** 상담원(marked) 둘이 있는 방에서 한 명이 나가도
+    고객은 남고, 마지막 상담원이 나가면 고객이 곧바로 방에서 나온다(ConfbridgeLeave → 끊김 처리기의 UserEvent).
+    그래서 회의방 기반 전환은 **새 상담원이 들어온 뒤에** 원래 상담원을 빼야 한다.
+
 ## 7. 클라이언트 설계 (`engine/ami`)
 
 ### 구성

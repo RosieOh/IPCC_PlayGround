@@ -7,7 +7,8 @@
 
 - `asterisk/` — Asterisk 22.11 이미지(Dockerfile)와 설정(`conf/`, 컨테이너 `/etc/asterisk`에 읽기 전용 마운트)
 - `engine/` — Go 모듈 `ipcc/engine`. `ami/`(AMI 클라이언트), `state/`(상태머신 코어, Rust 포팅), `live/`(상태머신을 AMI에 붙이는 껍데기),
-  `cmd/amicli/`(학습용 CLI), `cmd/state/`(녹화 재생), `cmd/engine/`(실시간 엔진), `testdata/`(Stage 1 녹화)
+  `rq/`(룸 큐: app_queue 없이 엔진이 분배, 두 축 상태, docs/12), `cmd/amicli/`(학습용 CLI), `cmd/state/`(녹화 재생),
+  `cmd/engine/`(실시간 엔진), `cmd/rqengine/`(룸 큐 엔진), `testdata/`(Stage 1 녹화)
 - `engine/state/testdata/` — 시나리오 녹화(`*.ami`), 상담원 명령(`*.cmds`), 기대 출력(`*.golden.jsonl`, Rust가 만든다)
 - `legacy-rust/` — 상태머신의 Rust '레거시' 구현 (기준 구현, D-016). Docker로만 빌드한다
 - `web/` — 실시간 현황판 (Next.js 16, React 19, Tailwind 4). 라우트 핸들러가 엔진 HTTP API의 게이트웨이다 (docs/11, D-020).
@@ -35,6 +36,7 @@
 | 한 번에 켜기 / 끄기 / 상태 | `script/start.sh [--demo]` / `script/stop.sh [--all]` / `script/status.sh` (PID·로그는 `.run/`) |
 | 데모 콜 / 로그 / 전체 검사 | `script/demo.sh [-n N] [--loop]` / `script/logs.sh engine\|web\|asterisk` / `script/check.sh [--quick]` |
 | 가짜 상담원 / 가짜 콜 | `make sim-agents`, `make sim-call n=3`, `make sim-abandon` |
+| 룸 큐 (app_queue 없는 큐, 대표번호 5100) | `make rq-engine`(stdin 명령) → `make sim-rq-call n=3` |
 | SIP 자동 테스트 | `make sip-register`, `make sip-echo`, `make sip-queue`, `make sip-agent-call` |
 | 음성(RTP) 경로 검사 | `make rtp-check` — Mac에서 602 에코로 RTP 왕복을 센다 |
 | 이벤트 녹화·재생·집계 | `bin/amicli watch -record DIR`, `bin/amicli replay [-only E1,E2] [-v] FILE`, `bin/amicli stats [-fields] FILE…` |
@@ -87,3 +89,6 @@
 - `RingTime`은 AgentConnect에서 초, AgentRingNoAnswer에서 밀리초다.
 - 벨이 울리는 중에 고객이 끊으면 상담원 쪽 이벤트(AgentRingNoAnswer 등)는 오지 않는다.
 - 전환·3자통화에서도 Linkedid는 그대로다. 3자통화로 합쳐질 때는 Unhold 대신 `AttendedTransfer DestType=Threeway`가 온다.
+- dialplan에서 Linkedid는 `${CHANNEL(linkedid)}`다 (`${LINKEDID}` 변수는 없다).
+- 비동기 Originate가 실패하면 OriginateResponse의 Channel은 요청한 문자열 그대로(`Local/1004@sim-noanswer`)다. 성공이면 `-0000000b;1`이 붙는다.
+- ConfBridge `end_marked`: 마지막 marked 사용자가 나갈 때 고객이 나간다. 회의방 전환은 새 상담원이 들어온 뒤 원래 상담원을 뺀다.
